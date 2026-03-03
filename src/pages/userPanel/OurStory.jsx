@@ -12,7 +12,7 @@ const storyData = {
         image: "https://images.unsplash.com/photo-1556910103-1c02745aae4d?q=80&w=2070&auto=format&fit=crop",
         title: "The Beginning",
         paragraphs: [
-            "MomsCrunch started in 2021 with a simple goal: to share the authentic, crunchy flavors of Rajasthan with the world. Inspired by age-old family recipes, we focus on small batches and high-quality ingredients.",
+            "MomsCrunch started in 2026 with a simple goal: to share the authentic, crunchy flavors of Rajasthan with the world. Inspired by age-old family recipes, we focus on small batches and high-quality ingredients.",
             "Every pack of snacks is a testament to our commitment to quality. From our spicy Achars to our healthy Makhanas, we ensure everything is handcrafted with care."
         ]
     },
