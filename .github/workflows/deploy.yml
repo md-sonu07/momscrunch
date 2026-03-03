@@ -32,4 +32,6 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           source: "dist/*"
-          target: "/home/app.momscrunch.com/momscrunch/"
+          target: "/home/app.momscrunch.com/momscrunch"
+          overwrite: true
+          rm: true
