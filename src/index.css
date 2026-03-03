@@ -1,0 +1,116 @@
+@import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+    --color-primary: #ec6d13;
+    --color-background-light: #fdfcfb;
+    /* --color-background-dark: #1a130e; */
+    --color-background-dark: #000000b3;
+    --color-makhana-green: #e8f5e9;
+    --color-achar-orange: #fff3e0;
+
+    --font-display: "Plus Jakarta Sans", sans-serif;
+
+    --radius-DEFAULT: 0.25rem;
+    --radius-lg: 0.5rem;
+    --radius-xl: 1rem;
+    --radius-2xl: 1.5rem;
+    --radius-full: 9999px;
+
+    --shadow-glass: 0 -4px 20px -10px rgba(0, 0, 0, 0.1);
+
+    @keyframes float {
+
+        0%,
+        100% {
+            transform: translateY(0);
+        }
+
+        50% {
+            transform: translateY(-15px);
+        }
+    }
+
+    @keyframes shimmer {
+        0% {
+            transform: translateX(-100%);
+        }
+
+        100% {
+            transform: translateX(100%);
+        }
+    }
+
+    @keyframes progress {
+        0% {
+            transform: scaleX(1);
+        }
+
+        100% {
+            transform: scaleX(0);
+        }
+    }
+
+    --animate-float: float 5s ease-in-out infinite;
+    --animate-shimmer: shimmer 2s infinite;
+    --animate-progress: progress 3s linear forwards;
+}
+
+/* Base styles and Theme Variables */
+@layer base {
+    :root {
+        --background: #fdfcfb;
+        --foreground: #0f172a;
+        color-scheme: light;
+    }
+
+    .dark {
+        --background: #1a130e;
+        --foreground: #f1f5f9;
+        color-scheme: dark;
+    }
+
+    body {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        background-color: var(--background);
+        color: var(--foreground);
+        @apply antialiased transition-colors duration-300;
+    }
+}
+
+@layer utilities {
+    .hide-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+
+    .hide-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+
+    .glass-nav {
+        @apply bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-slate-200/50 dark:border-slate-800/50 shadow-glass;
+    }
+
+    .nav-link {
+        position: relative;
+        padding-bottom: 2px;
+    }
+
+    .nav-link::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        bottom: 0;
+        width: 0;
+        height: 2px;
+        background: #ec6d13;
+        transition: width 0.3s ease;
+    }
+
+    .nav-link:hover::after {
+        width: 100%;
+    }
+}
