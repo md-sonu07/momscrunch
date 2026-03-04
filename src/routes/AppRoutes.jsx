@@ -27,7 +27,7 @@ const AppRoutes = () => {
             <Route path="/contact" element={<Contact />} />
 
             {/* Protected Routes */}
-            <ProtectedRoute>
+            <Route element={<ProtectedRoute />}>
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/profile/cart" element={<Cart />} />
                 <Route path="/profile/orders" element={<ActiveOrders />} />
@@ -35,7 +35,8 @@ const AppRoutes = () => {
                 <Route path="/profile/addresses" element={<Addresses />} />
                 <Route path="/profile/settings" element={<Settings />} />
                 <Route path="/checkout" element={<Checkout />} />
-            </ProtectedRoute>
+            </Route>
+
         </Routes>
     );
 };

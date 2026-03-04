@@ -13,7 +13,7 @@ const Navbar = () => {
     const isDarkMode = useSelector((state) => state.theme.mode === 'dark')
     const { query, isOpen } = useSelector((state) => state.search)
     const { currentLocation } = useSelector((state) => state.location)
-    const { isAuthenticated, user } = useSelector((state) => state.auth)
+    const { user } = useSelector((state) => state.auth)
     const dispatch = useDispatch()
     const location = useLocation()
     const [isPincodeModalOpen, setIsPincodeModalOpen] = useState(false);
@@ -195,21 +195,13 @@ const Navbar = () => {
                     </Link>
 
                     {/* Profile User */}
-                    {!isAuthenticated ? (
-                        <Link
-                            to="/login"
-                            className="hidden md:flex items-center px-4 h-10 bg-primary text-white rounded-xl font-bold text-[11px] uppercase tracking-wider shadow-lg shadow-primary/20 hover:scale-[1.05] transition-all duration-300 active:scale-95"
-                        >
-                            Login
-                        </Link>
-                    ) : (
-                        <Link
-                            to="/profile"
-                            className="hidden md:flex items-center cursor-pointer justify-center size-10 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-full hover:bg-primary dark:hover:bg-primary hover:text-white dark:hover:text-white transition-all duration-300 shadow-md shadow-slate-900/10 dark:shadow-white/5 active:scale-95 group overflow-hidden font-black text-xs"
-                        >
-                            {user?.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase() : <User size={18} />}
-                        </Link>
-                    )}
+                    <Link
+                        to="/profile"
+                        className="hidden md:flex items-center cursor-pointer justify-center size-10 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-full hover:bg-primary dark:hover:bg-primary hover:text-white dark:hover:text-white transition-all duration-300 shadow-md shadow-slate-900/10 dark:shadow-white/5 active:scale-95 group overflow-hidden font-black text-xs"
+                    >
+                        {user?.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase() : <User size={18} />}
+                    </Link>
+
                 </div>
             </div>
         </header>

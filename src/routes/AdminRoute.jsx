@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Outlet } from 'react-router-dom';
 
 const AdminRoute = ({ children }) => {
     // Basic logic: if no user or user is not admin, redirect to home
@@ -9,7 +9,8 @@ const AdminRoute = ({ children }) => {
         return <Navigate to="/" replace />;
     }
 
-    return children;
+    return children ? children : <Outlet />;
 };
 
 export default AdminRoute;
+
