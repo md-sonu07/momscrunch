@@ -23,8 +23,13 @@ const productSlice = createSlice({
             })
             .addCase(getProducts.fulfilled, (state, action) => {
                 state.loading = false;
-                state.products = action.payload.data || action.payload;
-                state.pagination = action.payload.pagination || {};
+                const data = action.payload.results || action.payload.data || action.payload;
+                state.products = Array.isArray(data) ? data : [];
+                state.pagination = action.payload.pagination || {
+                    count: action.payload.count,
+                    next: action.payload.next,
+                    previous: action.payload.previous
+                };
             })
             .addCase(getProducts.rejected, (state, action) => {
                 state.loading = false;

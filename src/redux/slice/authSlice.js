@@ -28,7 +28,7 @@ const authSlice = createSlice({
             .addCase(signup.fulfilled, (state, action) => {
                 state.loading = false;
                 state.isAuthenticated = true;
-                const userData = action.payload.user || action.payload.data?.user || action.payload;
+                const userData = action.payload.user || action.payload.data?.user || (action.payload.email || action.payload.name ? action.payload : null);
                 const tokenData = action.payload.token || action.payload.access || action.payload.data?.token;
 
                 state.user = userData;
@@ -49,7 +49,7 @@ const authSlice = createSlice({
             .addCase(login.fulfilled, (state, action) => {
                 state.loading = false;
                 state.isAuthenticated = true;
-                const userData = action.payload.user || action.payload.data?.user || action.payload;
+                const userData = action.payload.user || action.payload.data?.user || (action.payload.email || action.payload.name ? action.payload : null);
                 const tokenData = action.payload.token || action.payload.access || action.payload.data?.token;
 
                 state.user = userData;

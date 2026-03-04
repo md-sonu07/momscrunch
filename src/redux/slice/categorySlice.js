@@ -22,7 +22,8 @@ const categorySlice = createSlice({
             })
             .addCase(getCategories.fulfilled, (state, action) => {
                 state.loading = false;
-                state.categories = action.payload.data || action.payload;
+                const data = action.payload.results || action.payload.data || action.payload;
+                state.categories = Array.isArray(data) ? data : [];
             })
             .addCase(getCategories.rejected, (state, action) => {
                 state.loading = false;
@@ -34,7 +35,8 @@ const categorySlice = createSlice({
             })
             .addCase(getSubCategories.fulfilled, (state, action) => {
                 state.loading = false;
-                state.subCategories = action.payload.data || action.payload;
+                const data = action.payload.results || action.payload.data || action.payload;
+                state.subCategories = Array.isArray(data) ? data : [];
             })
             .addCase(getSubCategories.rejected, (state, action) => {
                 state.loading = false;

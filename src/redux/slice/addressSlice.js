@@ -21,7 +21,8 @@ const addressSlice = createSlice({
             })
             .addCase(fetchAddresses.fulfilled, (state, action) => {
                 state.loading = false;
-                state.addresses = action.payload.data;
+                const data = action.payload.results || action.payload.data || action.payload;
+                state.addresses = Array.isArray(data) ? data : [];
             })
             .addCase(fetchAddresses.rejected, (state, action) => {
                 state.loading = false;
