@@ -1,12 +1,13 @@
 import axiosApi from "./axios";
 
 export const getUserProfile = async () => {
-    const response = await axiosApi.get("/api/users/profile");
+    // Generally, if PUT is at /customer/profile/, GET might be there too
+    const response = await axiosApi.get("/customer/profile/");
     return response.data;
 };
 
 export const updateProfile = async (profileData) => {
-    const response = await axiosApi.put("/api/users/profile", profileData);
+    const response = await axiosApi.put("/customer/profile/", profileData);
     return response.data;
 };
 

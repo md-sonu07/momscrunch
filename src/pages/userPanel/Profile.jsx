@@ -17,10 +17,8 @@ const Profile = () => {
     const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
 
     useEffect(() => {
-        if (!profile) {
-            dispatch(fetchProfile());
-        }
-    }, [dispatch, profile]);
+        dispatch(fetchProfile());
+    }, [dispatch]);
 
     const displayUser = profile || user;
 

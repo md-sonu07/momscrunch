@@ -2,9 +2,8 @@ import React, { useEffect } from 'react';
 // import { useDispatch, useSelector } from 'react-redux';
 // import { fetchAllProducts, fetchAllCategories } from '../../redux/thunk/productThunk';
 import PromoBanners from '../../components/userComponents/home/PromoBanners';
-import AcharCategories from '../../components/userComponents/home/AcharCategories';
-import ThekuaCategories from '../../components/userComponents/home/ThekuaCategories';
 import StepToDoor from '../../components/userComponents/home/StepToDoor';
+import ProductsWithCategory from '../../components/userComponents/home/ProductsWithCategory';
 
 const Home = () => {
     // const dispatch = useDispatch();
@@ -33,8 +32,7 @@ const Home = () => {
             <PromoBanners />
 
             <div className="max-w-7xl mx-auto space-y-12">
-                <ThekuaCategories />
-                <AcharCategories />
+                <ProductsWithCategory />
                 <StepToDoor />
             </div>
         </div>

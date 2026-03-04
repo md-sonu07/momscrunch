@@ -1,115 +1,67 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { getProducts } from '../../redux/thunk/productThunk';
+import { getCategories, getSubCategories } from '../../redux/thunk/categoryThunk';
 import ProductCard from '../../components/common/ProductCard';
-import { Search, Filter, SlidersHorizontal } from 'lucide-react';
+import { Search, SlidersHorizontal, PackageSearch } from 'lucide-react';
 
-const allProductsData = [
-    {
-        id: 1,
-        category: "Achar",
-        name: "Rajasthani Garlic Achar",
-        image: "https://images.unsplash.com/photo-1589113103503-496550346c1f?q=80&w=800&auto=format&fit=crop",
-        tag: "Top Rated",
-        tagBg: "bg-emerald-500/90",
-        rating: 4,
-        reviews: 94,
-        weight: "250g Glass Jar",
-        oldPrice: 175,
-        price: 149,
-        themeColor: "emerald"
-    },
-    {
-        id: 2,
-        category: "Achar",
-        name: "Traditional Mango Achar",
-        image: "https://images.unsplash.com/photo-1589113103503-496550346c1f?q=80&w=800&auto=format&fit=crop",
-        tag: "Classic",
-        tagBg: "bg-amber-500/90",
-        rating: 5,
-        reviews: 156,
-        weight: "500g Glass Jar",
-        oldPrice: 299,
-        price: 249,
-        themeColor: "emerald"
-    },
-    {
-        id: 3,
-        category: "Achar",
-        name: "Spicy Lemon Achar",
-        image: "https://images.unsplash.com/photo-1590080873952-4a85a06517da?q=80&w=800&auto=format&fit=crop",
-        tag: "Spiced",
-        tagBg: "bg-yellow-500/90",
-        rating: 4,
-        reviews: 62,
-        weight: "250g Glass Jar",
-        oldPrice: 199,
-        price: 169,
-        themeColor: "emerald"
-    },
-    {
-        id: 4,
-        category: "Thekua",
-        name: "Authentic Wheat Thekua",
-        image: "https://images.unsplash.com/photo-1605085112728-3cdbb6241f2d?q=80&w=800&auto=format&fit=crop",
-        tag: "Best Seller",
-        tagBg: "bg-orange-500/90",
-        rating: 5,
-        reviews: 124,
-        weight: "500g Traditional Pack",
-        oldPrice: 249,
-        price: 199,
-        themeColor: "orange"
-    },
-    {
-        id: 5,
-        category: "Thekua",
-        name: "Gud (Jaggery) Thekua",
-        image: "https://images.unsplash.com/photo-1590080873952-4a85a06517da?q=80&w=800&auto=format&fit=crop",
-        tag: "Specialty",
-        tagBg: "bg-amber-600/90",
-        rating: 4,
-        reviews: 86,
-        weight: "400g Artisanal Pack",
-        oldPrice: 299,
-        price: 249,
-        themeColor: "orange"
-    },
-    {
-        id: 6,
-        category: "Thekua",
-        name: "Mix Dry Fruit Thekua",
-        image: "https://images.unsplash.com/photo-1599596395112-9dae07b8b2cb?q=80&w=800&auto=format&fit=crop",
-        tag: "Premium",
-        tagBg: "bg-rose-500/90",
-        rating: 5,
-        reviews: 42,
-        weight: "400g Premium Pack",
-        oldPrice: 399,
-        price: 349,
-        themeColor: "orange"
-    }
-];
+const Shop = () => {
+    const dispatch = useDispatch();
+    const { products, loading: productsLoading } = useSelector((state) => state.product);
+    const { categories: dynamicCategories, subCategories, loading: categoriesLoading } = useSelector((state) => state.category);
 
-const AllProducts = () => {
+    console.log("products :", products);
+    console.log("dynamicCategories :", dynamicCategories);
+
     const [selectedCategory, setSelectedCategory] = useState("All");
     const [searchQuery, setSearchQuery] = useState("");
     const [sortBy, setSortBy] = useState("Popularity");
     const [isSortOpen, setIsSortOpen] = useState(false);
 
-    const categories = ["All", "Achar", "Thekua"];
+    useEffect(() => {
+        dispatch(getProducts());
+        dispatch(getCategories());
+        dispatch(getSubCategories());
+    }, [dispatch]);
+
     const sortOptions = ["Popularity", "Newest First", "Price: Low to High", "Price: High to Low"];
 
-    const filteredProducts = allProductsData
+    const filteredProducts = products
         .filter(product => {
-            const matchesCategory = selectedCategory === "All" || product.category === selectedCategory;
+            if (selectedCategory === "All") return product.name.toLowerCase().includes(searchQuery.toLowerCase());
+
+            // Find current category ID
+            const categoryId = dynamicCategories.find(c => c.name === selectedCategory)?.id;
+
+            // Find subcategories belonging to this category
+            const allowedSubCategoryIds = subCategories
+                .filter(sub => sub.category === categoryId)
+                .map(sub => sub.id);
+
+            const matchesCategory = product.category === categoryId ||
+                product.category_name === selectedCategory ||
+                allowedSubCategoryIds.includes(product.subcategory);
+
             const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
             return matchesCategory && matchesSearch;
         })
         .sort((a, b) => {
             if (sortBy === "Newest First") return b.id - a.id;
-            if (sortBy === "Price: Low to High") return a.price - b.price;
-            if (sortBy === "Price: High to Low") return b.price - a.price;
+            const priceA = a.price || a.starting_from || 0;
+            const priceB = b.price || b.starting_from || 0;
+            if (sortBy === "Price: Low to High") return priceA - priceB;
+            if (sortBy === "Price: High to Low") return priceB - priceA;
             return 0; // Popularity (default)
         });
+
+    if (productsLoading || categoriesLoading) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen space-y-4">
+                <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+                <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Fetching Collection...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="bg-background-light dark:bg-background-dark min-h-screen text-slate-900 dark:text-slate-100 antialiased flex flex-col">
@@ -136,6 +88,18 @@ const AllProducts = () => {
                     {/* Sidebar / Filters */}
                     <aside className="lg:w-64 shrink-0 space-y-8">
 
+                        {/* Search in Categories */}
+                        <div className="relative group">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" size={16} />
+                            <input
+                                type="text"
+                                placeholder="Search products..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl py-3.5 pl-12 pr-4 text-xs font-bold focus:outline-none focus:border-primary/50 transition-all shadow-sm"
+                            />
+                        </div>
+
                         {/* Categories */}
                         <div>
                             <div className="flex items-center justify-between mb-4 px-1">
@@ -149,19 +113,34 @@ const AllProducts = () => {
                                     </button>
                                 )}
                             </div>
-                            <div className="flex lg:flex-col gap-2 overflow-x-auto pb-2 lg:pb-0 -mx-4 px-4 lg:mx-0 lg:px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                                {categories.map(cat => (
+                            <div className="flex lg:flex-col gap-2 overflow-x-auto pb-2 lg:pb-0 -mx-4 px-4 lg:mx-0 lg:px-0 hide-scrollbar">
+                                <button
+                                    onClick={() => setSelectedCategory("All")}
+                                    className={`px-5 py-3 cursor-pointer rounded-xl text-xs font-bold transition-all duration-300 ease-in-out text-left flex items-center justify-between border whitespace-nowrap shrink-0 ${selectedCategory === "All"
+                                        ? "bg-primary text-white border-primary shadow-lg shadow-primary/20"
+                                        : "bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-100 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800"
+                                        }`}
+                                >
+                                    <span>All</span>
+                                    <span className={`text-[10px] opacity-40 ${selectedCategory === "All" ? 'opacity-80' : ''}`}>
+                                        {products.length}
+                                    </span>
+                                </button>
+                                {dynamicCategories.map(cat => (
                                     <button
-                                        key={cat}
-                                        onClick={() => setSelectedCategory(cat)}
-                                        className={`px-5 py-3 cursor-pointer rounded-xl text-xs font-bold transition-all duration-300 ease-in-out text-left flex items-center justify-between border whitespace-nowrap shrink-0 ${selectedCategory === cat
+                                        key={cat.id}
+                                        onClick={() => setSelectedCategory(cat.name)}
+                                        className={`px-5 py-3 cursor-pointer rounded-xl text-xs font-bold transition-all duration-300 ease-in-out text-left flex items-center justify-between border whitespace-nowrap shrink-0 ${selectedCategory === cat.name
                                             ? "bg-primary text-white border-primary shadow-lg shadow-primary/20"
                                             : "bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-100 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800"
                                             }`}
                                     >
-                                        <span className="mr-3">{cat}</span>
-                                        <span className={`text-[10px] transition-opacity duration-300 ${selectedCategory === cat ? 'opacity-80' : 'opacity-40'}`}>
-                                            {cat === "All" ? allProductsData.length : allProductsData.filter(p => p.category === cat).length}
+                                        <span className="mr-3">{cat.name}</span>
+                                        <span className={`text-[10px] opacity-40 ${selectedCategory === cat.name ? 'opacity-80' : ''}`}>
+                                            {products.filter(p => {
+                                                const subIds = subCategories.filter(s => s.category === cat.id).map(s => s.id);
+                                                return p.category === cat.id || p.category_name === cat.name || subIds.includes(p.subcategory);
+                                            }).length}
                                         </span>
                                     </button>
                                 ))}
@@ -229,7 +208,7 @@ const AllProducts = () => {
                         ) : (
                             <div className="flex flex-col items-center justify-center py-20 text-center">
                                 <div className="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-6">
-                                    <Search size={32} className="text-slate-300 dark:text-slate-600" />
+                                    <PackageSearch size={32} className="text-slate-300 dark:text-slate-600" />
                                 </div>
                                 <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">No products found</h3>
                                 <p className="text-slate-500 dark:text-slate-400 max-w-xs">We couldn't find any products matching your search or category selection.</p>
@@ -248,4 +227,4 @@ const AllProducts = () => {
     );
 };
 
-export default AllProducts;
+export default Shop;

@@ -26,7 +26,7 @@ const userSlice = createSlice({
             })
             .addCase(fetchProfile.fulfilled, (state, action) => {
                 state.loading = false;
-                state.profile = action.payload.data;
+                state.profile = action.payload.data || action.payload;
             })
             .addCase(fetchProfile.rejected, (state, action) => {
                 state.loading = false;
@@ -40,7 +40,7 @@ const userSlice = createSlice({
             })
             .addCase(updateProfile.fulfilled, (state, action) => {
                 state.loading = false;
-                state.profile = action.payload.data;
+                state.profile = action.payload.data || action.payload;
                 state.success = true;
             })
             .addCase(updateProfile.rejected, (state, action) => {

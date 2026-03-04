@@ -23,8 +23,8 @@ const productSlice = createSlice({
             })
             .addCase(getProducts.fulfilled, (state, action) => {
                 state.loading = false;
-                state.products = action.payload.data;
-                state.pagination = action.payload.pagination;
+                state.products = action.payload.data || action.payload;
+                state.pagination = action.payload.pagination || {};
             })
             .addCase(getProducts.rejected, (state, action) => {
                 state.loading = false;
@@ -36,7 +36,7 @@ const productSlice = createSlice({
             })
             .addCase(getProductById.fulfilled, (state, action) => {
                 state.loading = false;
-                state.product = action.payload.data;
+                state.product = action.payload.data || action.payload;
             })
             .addCase(getProductById.rejected, (state, action) => {
                 state.loading = false;

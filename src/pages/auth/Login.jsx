@@ -1,15 +1,25 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, LogIn, Github, Chrome } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useDispatch, useSelector } from 'react-redux';
 import { login } from '../../redux/thunk/authThunk';
+import { clearError } from '../../redux/slice/authSlice';
 
 const Login = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
-    const { loading } = useSelector((state) => state.auth);
+    const location = useLocation();
+    const { loading, error, isAuthenticated } = useSelector((state) => state.auth);
     const [showPassword, setShowPassword] = useState(false);
+
+    const from = location.state?.from?.pathname || "/";
+
+    useEffect(() => {
+        dispatch(clearError());
+        if (isAuthenticated) navigate(from, { replace: true });
+    }, [dispatch, isAuthenticated, navigate, from]);
+
     const [formData, setFormData] = useState({
         email: '',
         password: '',
@@ -35,7 +45,7 @@ const Login = () => {
                         fontSize: '12px'
                     },
                 });
-                navigate('/');
+                navigate(from, { replace: true });
             } else {
                 toast.error(resultAction.payload || "Login failed");
             }

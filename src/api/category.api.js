@@ -1,12 +1,15 @@
 import axiosApi from './axios.js';
 
 export const fetchCategories = async () => {
-    const response = await axiosApi.get('/api/categories');
+    const response = await axiosApi.get('/api/category/');
     return response.data;
 };
 
 export const fetchSubCategories = async (categoryId) => {
-    const response = await axiosApi.get(`/api/subcategories/category/${categoryId}`);
+    // Note: The Swagger shows /api/subcategory/ for the list. 
+    // If we need filtered by category, we might need to check if there's a filter param.
+    // However, the Swagger path list doesn't show a specific category-filtered subcategory endpoint other than the list.
+    const response = await axiosApi.get('/api/subcategory/');
     return response.data;
 };
 

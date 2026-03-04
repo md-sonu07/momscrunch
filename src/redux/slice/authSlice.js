@@ -28,10 +28,14 @@ const authSlice = createSlice({
             .addCase(signup.fulfilled, (state, action) => {
                 state.loading = false;
                 state.isAuthenticated = true;
-                state.user = action.payload.user;
-                state.token = action.payload.token;
-                localStorage.setItem('token', action.payload.token);
-                localStorage.setItem('user', JSON.stringify(action.payload.user));
+                const userData = action.payload.user || action.payload.data?.user || action.payload;
+                const tokenData = action.payload.token || action.payload.access || action.payload.data?.token;
+
+                state.user = userData;
+                state.token = tokenData;
+
+                if (tokenData) localStorage.setItem('token', tokenData);
+                if (userData) localStorage.setItem('user', JSON.stringify(userData));
             })
             .addCase(signup.rejected, (state, action) => {
                 state.loading = false;
@@ -45,10 +49,14 @@ const authSlice = createSlice({
             .addCase(login.fulfilled, (state, action) => {
                 state.loading = false;
                 state.isAuthenticated = true;
-                state.user = action.payload.user;
-                state.token = action.payload.token;
-                localStorage.setItem('token', action.payload.token);
-                localStorage.setItem('user', JSON.stringify(action.payload.user));
+                const userData = action.payload.user || action.payload.data?.user || action.payload;
+                const tokenData = action.payload.token || action.payload.access || action.payload.data?.token;
+
+                state.user = userData;
+                state.token = tokenData;
+
+                if (tokenData) localStorage.setItem('token', tokenData);
+                if (userData) localStorage.setItem('user', JSON.stringify(userData));
             })
             .addCase(login.rejected, (state, action) => {
                 state.loading = false;
@@ -64,8 +72,9 @@ const authSlice = createSlice({
             })
             // Update Profile Sync
             .addCase(updateProfile.fulfilled, (state, action) => {
-                state.user = action.payload.data;
-                localStorage.setItem('user', JSON.stringify(action.payload.data));
+                const updatedUser = action.payload.user || action.payload.data || action.payload;
+                state.user = updatedUser;
+                localStorage.setItem('user', JSON.stringify(updatedUser));
             });
     },
 });

@@ -1,14 +1,23 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Mail, Lock, User, UserPlus, Eye, EyeOff, ArrowRight, Github, Chrome, ShieldCheck } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useDispatch, useSelector } from 'react-redux';
 import { sendOtp, verifyOtp, signup } from '../../redux/thunk/authThunk';
+import { clearError } from '../../redux/slice/authSlice';
 
 const Signup = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
-    const { loading } = useSelector((state) => state.auth || {});
+    const { loading, error, isAuthenticated } = useSelector((state) => state.auth || {});
+
+    const location = useLocation();
+    const from = location.state?.from?.pathname || "/";
+
+    useEffect(() => {
+        dispatch(clearError());
+        if (isAuthenticated) navigate(from, { replace: true });
+    }, [dispatch, isAuthenticated, navigate, from]);
 
     const [showPassword, setShowPassword] = useState(false);
     const [isOtpSent, setIsOtpSent] = useState(false);
@@ -72,7 +81,7 @@ const Signup = () => {
 
                 if (signup.fulfilled.match(signupAction)) {
                     toast.success("Account created successfully!");
-                    navigate('/profile');
+                    navigate(from, { replace: true });
                 } else {
                     toast.error(signupAction.payload || "Signup failed");
                 }
