@@ -27,7 +27,7 @@ import { placeOrder, createPaymentOrder, verifyPayment } from '../../api/payment
 const Checkout = () => {
     const [isProcessing, setIsProcessing] = useState(false);
     const [step, setStep] = useState(1);
-    const [paymentMethod, setPaymentMethod] = useState('upi');
+    const [paymentMethod, setPaymentMethod] = useState('online');
     const [selectedAddressId, setSelectedAddressId] = useState(null);
     const [shippingForm, setShippingForm] = useState({
         name: '',
@@ -68,6 +68,17 @@ const Checkout = () => {
             }
         };
     }, [dispatch]);
+
+    // Redirect to shop if cart is empty
+    const { cart, loading: cartLoading } = useSelector((state) => state.cart);
+    useEffect(() => {
+        if (!cartLoading && cart && cartItems.length === 0) {
+            navigate('/shop');
+            toast.error('Your bucket is empty. Let\'s crunch some items first!', {
+                id: 'empty-cart-error'
+            });
+        }
+    }, [cartLoading, cart, cartItems.length, navigate]);
 
     const applyAddressToForm = (address) => {
         if (!address) {
@@ -178,8 +189,15 @@ const Checkout = () => {
 
         try {
             // 1. Create order in backend
-            const orderRes = await placeOrder(shippingForm);
+            const orderRes = await placeOrder(shippingForm, paymentMethod);
             const { order_id } = orderRes;
+
+            if (paymentMethod === 'cod') {
+                toast.success('Order Placed Successfully! Your premium crunch is on the way.');
+                // Navigate to orders page
+                navigate('/profile/orders');
+                return;
+            }
 
             // 2. Create Razorpay order
             const razorpayOrder = await createPaymentOrder(order_id);
@@ -201,7 +219,7 @@ const Checkout = () => {
                             razorpay_signature: response.razorpay_signature,
                         });
                         toast.success('Payment Successful! Your crunch is on the way.');
-                        navigate('profile/orders'); 
+                        navigate('/profile/orders');
                     } catch (error) {
                         toast.error('Payment verification failed. Please contact support.');
                     } finally {
@@ -475,10 +493,8 @@ const Checkout = () => {
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {[
-                                        { id: 'upi', name: 'UPI / QR Code', icon: '📱', desc: 'Secure phone payment', popular: true },
-                                        { id: 'card', name: 'Card Payment', icon: '💳', desc: 'Credit or Debit cards' },
-                                        { id: 'net', name: 'Net Banking', icon: '🏦', desc: 'All Indian banks' },
-                                        { id: 'cod', name: 'Cash on Delivery', icon: '💵', desc: 'Pay when you crunch' }
+                                        { id: 'online', name: 'Online Payment', icon: <CreditCard className="text-primary" />, desc: 'UPI, Card, Net Banking', popular: true },
+                                        { id: 'cod', name: 'Cash on Delivery', icon: <Truck className="text-primary" />, desc: 'Pay when you crunch' },
                                     ].map((method) => {
                                         const isActive = paymentMethod === method.id;
                                         return (
@@ -496,7 +512,7 @@ const Checkout = () => {
                                                     </div>
                                                 )}
 
-                                                <div className={`w-11 h-11 rounded-lg flex items-center justify-center text-2xl shadow-sm border transition-all ${isActive
+                                                <div className={`w-11 h-11 rounded-lg flex items-center justify-center shadow-sm border transition-all ${isActive
                                                     ? 'bg-white dark:bg-slate-900 border-primary/20 scale-105'
                                                     : 'bg-white dark:bg-slate-900 border-slate-50 dark:border-slate-800 group-hover:scale-105'
                                                     }`}>
