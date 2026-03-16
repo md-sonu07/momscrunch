@@ -15,12 +15,29 @@ export const signup = createAsyncThunk(
 
 export const sendOtp = createAsyncThunk(
     'auth/sendOtp',
-    async (email, { rejectWithValue }) => {
+    async (registrationData, { rejectWithValue }) => {
         try {
-            const data = await sendOtpApi(email);
+            const data = await sendOtpApi(registrationData);
             return data;
         } catch (error) {
-            return rejectWithValue(error.response?.data?.message || 'Failed to send OTP');
+            let message = 'Failed to send OTP';
+            if (error.response?.data) {
+                const data = error.response.data;
+                if (typeof data === 'string') {
+                    message = data;
+                } else if (data.message || data.error) {
+                    message = data.message || data.error;
+                } else {
+                    // Extract first error from field-level errors object
+                    const fieldErrors = Object.values(data);
+                    if (fieldErrors.length > 0) {
+                        message = Array.isArray(fieldErrors[0]) ? fieldErrors[0][0] : fieldErrors[0];
+                    }
+                }
+            } else if (error.message) {
+                message = error.message;
+            }
+            return rejectWithValue(message);
         }
     }
 );
@@ -56,7 +73,18 @@ export const logout = createAsyncThunk(
             const data = await logoutApi();
             return data;
         } catch (error) {
-            return rejectWithValue(error.response?.data?.message || 'Logout failed');
+            console.error('Logout thunk error:', error);
+            let errorMessage = 'Logout failed';
+            
+            if (error.response?.data) {
+                const errorData = error.response.data;
+                console.error('Error response data:', errorData);
+                errorMessage = errorData.error || errorData.message || errorData.detail || 'Logout failed';
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+            
+            return rejectWithValue(errorMessage);
         }
     }
 );

@@ -55,7 +55,7 @@ const Login = () => {
     };
 
     return (
-        <div className="min-h-screen bg-background-light dark:bg-background-dark flex items-center justify-center p-6 relative overflow-hidden selection:bg-primary selection:text-white pt-20">
+        <div className="min-h-screen bg-background-light dark:bg-background-dark flex items-center justify-center sm:p-6 p-2 relative overflow-hidden selection:bg-primary selection:text-white pt-10 pb-34">
             {/* Background Decorative Blobs */}
             <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 rounded-3xl blur-[120px] -z-10 animate-pulse"></div>
             <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-orange-500/10 rounded-3xl blur-[120px] -z-10 animate-pulse" style={{ animationDelay: '2s' }}></div>
@@ -139,7 +139,7 @@ const Login = () => {
                             disabled={loading}
                             className="w-full bg-primary text-white py-4 rounded-xl font-black uppercase tracking-[0.2em] text-[11px] shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 group cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
                         >
-                            {loading ? "Authenticating..." : "Sign In"}
+                            {loading ? "Logging in..." : "Login"}
                             <LogIn size={16} className="group-hover:translate-x-1 transition-transform" />
                         </button>
                     </form>
@@ -153,19 +153,6 @@ const Login = () => {
                             <span className="bg-white dark:bg-[#1a130e] px-4 text-[10px] font-black uppercase tracking-widest text-slate-400">or continue with</span>
                         </div>
                     </div>
-
-                    {/* Social Logins */}
-                    <div className="grid grid-cols-2 gap-4 mb-8">
-                        <button className="flex items-center justify-center gap-3 py-3 px-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all group cursor-pointer">
-                            <Chrome size={18} className="text-slate-600 dark:text-slate-300" />
-                            <span className="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">Google</span>
-                        </button>
-                        <button className="flex items-center justify-center gap-3 py-3 px-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all group cursor-pointer">
-                            <Github size={18} className="text-slate-600 dark:text-slate-300" />
-                            <span className="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">Github</span>
-                        </button>
-                    </div>
-
                     <p className="text-center text-sm font-bold text-slate-500 dark:text-slate-400">
                         Don't have an account? {' '}
                         <Link to="/signup" className="text-primary hover:underline underline-offset-4 decoration-2">Create one now</Link>

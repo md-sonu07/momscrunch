@@ -1,30 +1,91 @@
 import React from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { closeSearch, setSearchQuery } from '../../redux/slice/searchSlice';
+import { getProducts } from '../../redux/thunk/productThunk';
 import { Search, ArrowRight, Package, TrendingUp, Sparkles, Flame } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-const products = [
-    { id: 1, name: "Rajasthani Garlic Achar", category: "Achar", price: 149, image: "https://images.unsplash.com/photo-1589113103503-496550346c1f?q=80&w=400" },
-    { id: 2, name: "Traditional Mango Achar", category: "Achar", price: 249, image: "https://images.unsplash.com/photo-1589113103503-496550346c1f?q=80&w=400" },
-    { id: 3, name: "Spicy Lemon Achar", category: "Achar", price: 169, image: "https://images.unsplash.com/photo-1590080873952-4a85a06517da?q=80&w=400" },
-    { id: 4, name: "Authentic Wheat Thekua", category: "Thekua", price: 199, image: "https://images.unsplash.com/photo-1605085112728-3cdbb6241f2d?q=80&w=400" },
-    { id: 5, name: "Gud (Jaggery) Thekua", category: "Thekua", price: 249, image: "https://images.unsplash.com/photo-1590080873952-4a85a06517da?q=80&w=400" },
-    { id: 6, name: "Mix Dry Fruit Thekua", category: "Thekua", price: 349, image: "https://images.unsplash.com/photo-1599596395112-9dae07b8b2cb?q=80&w=400" }
-];
+const fallbackImage = "https://images.unsplash.com/photo-1589113103503-496550346c1f?q=80&w=800&auto=format&fit=crop";
+const categoryIcons = [Package, Flame, Sparkles, TrendingUp];
+
+const getMediaBaseUrl = () => {
+    const apiBase = import.meta.env.VITE_API_URL;
+    if (apiBase) {
+        return apiBase.replace(/\/$/, '');
+    }
+    if (typeof window !== 'undefined') {
+        return `${window.location.protocol}//${window.location.hostname}:8000`;
+    }
+    return '';
+};
+
+const resolveImageUrl = (product) => {
+    const rawImage = product.image || product.product_image || product.images?.[0]?.productimages;
+    if (!rawImage) return fallbackImage;
+    if (/^https?:\/\//i.test(rawImage)) return rawImage;
+    if (rawImage.startsWith('/')) return `${getMediaBaseUrl()}${rawImage}`;
+    return `${getMediaBaseUrl()}/${rawImage}`;
+};
 
 const SearchDropdown = ({ isOpen, query }) => {
     const dispatch = useDispatch();
+    const { products, loading } = useSelector((state) => state.product);
+
+    React.useEffect(() => {
+        if (isOpen && products.length === 0 && !loading) {
+            dispatch(getProducts());
+        }
+    }, [dispatch, isOpen, products.length, loading]);
 
     if (!isOpen) return null;
 
     const filteredProducts = query
-        ? products.filter(p => p.name.toLowerCase().includes(query.toLowerCase()))
+        ? products
+            .filter((product) =>
+                product.name?.toLowerCase().includes(query.toLowerCase()) ||
+                product.subcategory_name?.toLowerCase().includes(query.toLowerCase()) ||
+                product.category_name?.toLowerCase().includes(query.toLowerCase())
+            )
+            .slice(0, 6)
         : [];
+
+    const popularCategories = Object.values(
+        products.reduce((accumulator, product) => {
+            const displayName = product.subcategory_name || product.category_name;
+            if (!displayName) return accumulator;
+
+            if (!accumulator[displayName]) {
+                accumulator[displayName] = {
+                    name: displayName,
+                    categoryName: product.category_name || displayName,
+                    subcategoryName: product.subcategory_name || '',
+                    count: 0,
+                };
+            }
+
+            accumulator[displayName].count += 1;
+            return accumulator;
+        }, {})
+    )
+        .sort((first, second) => second.count - first.count)
+        .slice(0, 4);
+
+    const getCategoryHref = (category) => {
+        const params = new URLSearchParams();
+
+        if (category.categoryName) {
+            params.set('category', category.categoryName);
+        }
+
+        if (category.subcategoryName) {
+            params.set('subcategory', category.subcategoryName);
+        }
+
+        return `/shop?${params.toString()}`;
+    };
 
     const handleProductClick = (id) => {
         dispatch(closeSearch());
-        // navigate(`/product/${id}`);
     };
 
     return (
@@ -56,24 +117,28 @@ const SearchDropdown = ({ isOpen, query }) => {
                                 Popular Categories
                             </h3>
                             <div className="grid grid-cols-2 gap-3">
-                                {[
-                                    { name: 'Traditional Achar', icon: Package },
-                                    { name: 'Crispy Thekua', icon: Flame },
-                                ].map((cat) => (
-                                    <button
+                                {popularCategories.map((cat, index) => {
+                                    const Icon = categoryIcons[index % categoryIcons.length];
+
+                                    return (
+                                    <Link
                                         key={cat.name}
+                                        to={getCategoryHref(cat)}
                                         onClick={() => dispatch(closeSearch())}
                                         className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-2xl hover:border-primary transition-all group text-left"
                                     >
                                         <div className="size-10 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center text-primary border border-slate-100 dark:border-white/5 shadow-sm">
-                                            <cat.icon size={18} />
+                                            <Icon size={18} />
                                         </div>
                                         <div>
                                             <h4 className="text-sm font-black text-slate-800 dark:text-slate-100">{cat.name}</h4>
-                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Explore All</span>
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                                {cat.count} {cat.count === 1 ? 'Product' : 'Products'}
+                                            </span>
                                         </div>
-                                    </button>
-                                ))}
+                                    </Link>
+                                    );
+                                })}
                             </div>
                         </div>
                     </div>
@@ -87,28 +152,33 @@ const SearchDropdown = ({ isOpen, query }) => {
                         {filteredProducts.length > 0 ? (
                             <div className="grid gap-3">
                                 {filteredProducts.map(product => (
-                                    <div
+                                    <Link
                                         key={product.id}
+                                        to={`/product/${product.id}`}
                                         onClick={() => handleProductClick(product.id)}
                                         className="group flex items-center gap-4 p-4 bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-white/5 rounded-2xl hover:border-primary/40 hover:bg-slate-50 dark:hover:bg-slate-900 transition-all cursor-pointer"
                                     >
-                                        <div className="size-16 rounded-2xl overflow-hidden shrink-0 shadow-sm border border-slate-100 dark:border-white/5">
-                                            <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                        <div className="size-16 rounded-xl overflow-hidden shrink-0 shadow-sm border border-slate-100 dark:border-white/5">
+                                            <img
+                                                src={resolveImageUrl(product)}
+                                                alt={product.name}
+                                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                            />
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <span className="text-[9px] font-black uppercase tracking-widest text-primary mb-1 block">
-                                                {product.category}
+                                                {product.subcategory_name || product.category_name || 'Snack'}
                                             </span>
                                             <h4 className="text-base font-black text-slate-800 dark:text-white truncate group-hover:text-primary transition-colors">{product.name}</h4>
                                             <div className="flex items-center gap-2">
-                                                <span className="text-sm font-black text-slate-900 dark:text-white">₹{product.price}</span>
-                                                <span className="text-[10px] font-bold text-slate-400 line-through">₹{product.price + 60}</span>
+                                                <span className="text-sm font-black text-slate-900 dark:text-white">₹{product.starting_from || product.price}</span>
+                                                <span className="text-[10px] font-bold text-slate-400 line-through">₹{(Number(product.starting_from || product.price || 0) + 60).toFixed(0)}</span>
                                             </div>
                                         </div>
                                         <div className="size-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 group-hover:bg-primary group-hover:text-white transition-all shadow-sm">
                                             <ArrowRight size={18} />
                                         </div>
-                                    </div>
+                                    </Link>
                                 ))}
                             </div>
                         ) : (

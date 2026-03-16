@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Package, Settings, ChevronRight, User, Heart, ShoppingCart, MapPin, Menu, X } from 'lucide-react';
+import { Package, Settings, ChevronRight, User, Heart, ShoppingCart, MapPin, Menu, X, Wallet } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 
@@ -9,13 +9,12 @@ const ProfileSidebar = () => {
     const { profile } = useSelector((state) => state.user);
 
     const displayUser = profile || user;
-
     const initials = displayUser?.name
         ? displayUser.name.split(' ').map(n => n[0]).join('').toUpperCase()
         : 'U';
-
     const menuItems = [
         { name: "My Profile", icon: User, path: "/profile" },
+        { name: "My Wallet", icon: Wallet, path: "/profile/wallet" },
         { name: "Active Orders", icon: Package, path: "/profile/orders" },
         { name: "My Wishlist", icon: Heart, path: "/profile/wishlist" },
         { name: "Shopping Cart", icon: ShoppingCart, path: "/profile/cart", hideMobile: true },
@@ -75,7 +74,7 @@ const ProfileSidebar = () => {
 
             {/* Desktop Sidebar (Left Sticky) */}
             <aside className="hidden lg:flex flex-col w-72 h-[calc(100vh-200px)] sticky top-24 ml-6 my-10 space-y-4">
-                <div className="bg-white/30 dark:bg-slate-900/40 backdrop-blur-2xl border border-white dark:border-slate-800 rounded-4xl p-6 flex flex-col h-full shadow-xl shadow-slate-200/50 dark:shadow-none translate-y-0 hover:-translate-y-1 transition-all duration-500">
+                <div className="bg-white/30 dark:bg-slate-900/40 backdrop-blur-2xl border border-white dark:border-slate-800 rounded-2xl p-6 flex flex-col h-full shadow-xl shadow-slate-200/50 dark:shadow-none translate-y-0 hover:-translate-y-1 transition-all duration-500">
 
                     <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400/60 mb-4 ml-1">
                         User Dashboard

@@ -40,14 +40,16 @@ const AddressModal = ({ isOpen, onClose, onSave, initialData }) => {
     const { currentLocation } = useSelector((state) => state.location);
 
     const [formData, setFormData] = useState(initialData || {
-        type: 'Home',
+        address_type: 'home',
         name: '',
         phone: '',
-        address: '',
+        street: '',
         landmark: '',
         city: currentLocation?.city || 'Purnia',
         state: 'Bihar',
-        pincode: currentLocation?.pincode || '',
+        pin_code: currentLocation?.pincode || '',
+        country: 'India',
+        is_default: false,
     });
 
     const [mapCenter, setMapCenter] = useState([25.7711, 87.4753]); // Default Purnia, Bihar
@@ -66,7 +68,7 @@ const AddressModal = ({ isOpen, onClose, onSave, initialData }) => {
             setFormData(prev => ({
                 ...prev,
                 city: currentLocation?.city || prev.city,
-                pincode: currentLocation?.pincode || prev.pincode
+                pin_code: currentLocation?.pincode || prev.pin_code
             }));
         }
     }, [initialData, isOpen, currentLocation]);
@@ -87,7 +89,6 @@ const AddressModal = ({ isOpen, onClose, onSave, initialData }) => {
                 const neighborhood = a.neighbourhood || a.suburb || a.residential || a.city_district || '';
                 const locality = a.hamlet || a.village || a.town || a.suburb || '';
                 const district = a.city || a.district || a.county || '';
-
                 // Match user's "Purnia Madhuban Thana" style
                 // Prioritizing specific landmarks and Thana
                 let descriptiveParts = [road, police, neighborhood, locality].filter(Boolean);
@@ -105,10 +106,10 @@ const AddressModal = ({ isOpen, onClose, onSave, initialData }) => {
 
                 setFormData(prev => ({
                     ...prev,
-                    address: fullDisplayAddress,
+                    street: fullDisplayAddress,
                     city: cityValue,
                     state: stateValue,
-                    pincode: pinValue || prev.pincode
+                    pin_code: pinValue || prev.pin_code
                 }));
                 setStatusMsg('Location Captured!');
                 toast.success("Location pinpointed!", {
@@ -216,7 +217,14 @@ const AddressModal = ({ isOpen, onClose, onSave, initialData }) => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        onSave(formData);
+        const normalizedPhone = formData.phone.replace(/\D/g, '').slice(-10);
+        const normalizedPinCode = formData.pin_code.replace(/\D/g, '').slice(0, 6);
+
+        onSave({
+            ...formData,
+            phone: normalizedPhone,
+            pin_code: normalizedPinCode,
+        });
     };
 
     if (!isOpen) return null;
@@ -313,22 +321,22 @@ const AddressModal = ({ isOpen, onClose, onSave, initialData }) => {
                             <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4 block">Save address as</label>
                             <div className="flex items-center gap-2 sm:gap-3">
                                 {[
-                                    { label: 'Home', icon: Home },
-                                    { label: 'Work', icon: Briefcase },
-                                    { label: 'Other', icon: MapPin },
+                                    { value: 'home', label: 'Home', icon: Home },
+                                    { value: 'work', label: 'Work', icon: Briefcase },
+                                    { value: 'other', label: 'Other', icon: MapPin },
                                 ].map((type) => (
                                     <button
-                                        key={type.label}
+                                        key={type.value}
                                         type="button"
-                                        onClick={() => setFormData({ ...formData, type: type.label })}
-                                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${formData.type === type.label
+                                        onClick={() => setFormData({ ...formData, address_type: type.value })}
+                                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${formData.address_type === type.value
                                             ? 'bg-primary text-white shadow-xl shadow-primary/20 scale-105'
                                             : 'bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800'
                                             }`}
                                     >
                                         <type.icon size={15} />
                                         {type.label}
-                                        {formData.type === type.label && <Check size={12} />}
+                                        {formData.address_type === type.value && <Check size={12} />}
                                     </button>
                                 ))}
                             </div>
@@ -352,7 +360,7 @@ const AddressModal = ({ isOpen, onClose, onSave, initialData }) => {
                                     required
                                     type="tel"
                                     value={formData.phone}
-                                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                    onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/[^\d+\s-]/g, '') })}
                                     className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-white/5 rounded-xl px-5 py-4 text-xs font-bold focus:border-primary/40 focus:bg-white transition-all outline-none"
                                     placeholder="+91 00000 00000"
                                 />
@@ -376,8 +384,8 @@ const AddressModal = ({ isOpen, onClose, onSave, initialData }) => {
                                     required
                                     type="text"
                                     maxLength={6}
-                                    value={formData.pincode}
-                                    onChange={(e) => setFormData({ ...formData, pincode: e.target.value.replace(/\D/g, '') })}
+                                    value={formData.pin_code}
+                                    onChange={(e) => setFormData({ ...formData, pin_code: e.target.value.replace(/\D/g, '') })}
                                     className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-white/5 rounded-xl px-5 py-4 text-xs font-bold focus:border-primary/40 focus:bg-white transition-all outline-none"
                                     placeholder="6-digit Pincode"
                                 />
@@ -401,12 +409,24 @@ const AddressModal = ({ isOpen, onClose, onSave, initialData }) => {
                             <textarea
                                 required
                                 rows={3}
-                                value={formData.address}
-                                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                                value={formData.street}
+                                onChange={(e) => setFormData({ ...formData, street: e.target.value })}
                                 className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-white/5 rounded-xl px-5 py-4 text-xs font-bold focus:border-primary/40 focus:bg-white transition-all outline-none resize-none leading-relaxed"
                                 placeholder="House / Flat No, Local Area Name, Sector etc."
                             />
                         </div>
+
+                        <label className="flex items-center gap-3 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={Boolean(formData.is_default)}
+                                onChange={(e) => setFormData({ ...formData, is_default: e.target.checked })}
+                                className="size-4 accent-orange-500"
+                            />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                                Set as default delivery address
+                            </span>
+                        </label>
 
                         <div className="pt-4 flex gap-4">
                             <button

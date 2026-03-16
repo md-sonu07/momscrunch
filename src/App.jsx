@@ -10,6 +10,7 @@ import ProfileSidebar from './components/layout/ProfileSidebar'
 import SearchOverlay from './components/layout/SearchOverlay'
 import { ToastProvider } from './context/ToastContext'
 import { Toaster } from 'react-hot-toast'
+import CartPopup from './components/common/CartPopup'
 
 const App = () => {
   const theme = useSelector((state) => state.theme.mode)
@@ -45,6 +46,7 @@ const App = () => {
         {!isAuth && !hideFooter && <Footer />}
         <MobileNavComponent />
         <SearchOverlay />
+        <CartPopup />
       </div>
     </ToastProvider>
   )

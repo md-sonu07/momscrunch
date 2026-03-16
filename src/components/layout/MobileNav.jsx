@@ -3,17 +3,19 @@ import { Link, useLocation } from 'react-router-dom';
 import { Home, Grid2X2, Search, ShoppingCart, User } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { openSearch } from '../../redux/slice/searchSlice';
+import { selectCartItemCount } from '../../redux/slice/cartSlice';
 
 const MobileNav = () => {
     const location = useLocation();
     const dispatch = useDispatch();
     const isSearchOpen = useSelector((state) => state.search.isOpen);
+    const cartItemCount = useSelector(selectCartItemCount);
 
     const navItems = [
         { icon: Home, label: 'Home', path: '/' },
-        { icon: Grid2X2, label: 'Explore', path: '/shop' },
+        { icon: Grid2X2, label: 'Shop', path: '/shop' },
         { icon: Search, label: 'Search', onClick: () => dispatch(openSearch()) },
-        { icon: ShoppingCart, label: 'Cart', path: '/profile/cart', badge: 2 },
+        { icon: ShoppingCart, label: 'Cart', path: '/profile/cart', badge: cartItemCount },
         { icon: User, label: 'Profile', path: '/profile' },
     ];
 
@@ -25,18 +27,18 @@ const MobileNav = () => {
 
                 const content = (
                     <>
-                        <div className={`p-2 rounded-2xl transition-all duration-300 ${isActive ? 'bg-primary/10' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
+                        <div className={`p-2 rounded-2xl transition-all duration-300 relative ${isActive ? 'bg-primary/10' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
                             <Icon size={20} strokeWidth={isActive ? 2.5 : 2} className={isActive ? 'scale-110' : ''} />
+
+                            {item.badge > 0 && (
+                                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[7px] font-black h-4 w-4 rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900 shadow-sm animate-pulse z-10">
+                                    {item.badge}
+                                </span>
+                            )}
                         </div>
                         <span className={`text-[8px] font-black uppercase tracking-widest ${isActive ? 'opacity-100' : 'opacity-60'}`}>
                             {item.label}
                         </span>
-
-                        {item.badge && (
-                            <span className="absolute top-1 right-1 bg-red-500 text-white text-[7px] font-black h-3.5 w-3.5 rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900 shadow-sm animate-pulse">
-                                {item.badge}
-                            </span>
-                        )}
 
                         {isActive && (
                             <span className="absolute -bottom-1 h-1 w-1 rounded-full bg-primary" />

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
     ChevronLeft,
     ChevronRight,
@@ -8,26 +8,109 @@ import {
     Truck,
     ShieldCheck,
     Clock,
-    ShoppingBag
+    ShoppingBag,
+    Plus,
+    Minus,
+    Trash2
 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchCart, updateQuantity, deleteItem } from '../../redux/thunk/cartThunk';
+import { getStoreSettings } from '../../redux/thunk/storeSettingsThunk';
+import { selectCartItems } from '../../redux/slice/cartSlice';
+import { fetchAddresses } from '../../redux/thunk/addressThunk';
+import { selectAddresses, selectDefaultAddress } from '../../redux/slice/addressSlice';
+import { calculateOrderSummary, formatCurrency } from '../../utils/orderSummary';
+import { toast } from 'react-hot-toast';
+import { placeOrder, createPaymentOrder, verifyPayment } from '../../api/payment.api';
 
 const Checkout = () => {
+    const [isProcessing, setIsProcessing] = useState(false);
     const [step, setStep] = useState(1);
     const [paymentMethod, setPaymentMethod] = useState('upi');
+    const [selectedAddressId, setSelectedAddressId] = useState(null);
+    const [shippingForm, setShippingForm] = useState({
+        name: '',
+        phone: '',
+        street: '',
+        landmark: '',
+        city: '',
+        pin_code: '',
+        state: '',
+        country: 'India',
+    });
     const navigate = useNavigate();
+    const dispatch = useDispatch();
+    const cartItems = useSelector(selectCartItems);
+    const addresses = useSelector(selectAddresses);
+    const defaultAddress = useSelector(selectDefaultAddress);
+    const {
+        gstPercentage,
+        deliveryCharge,
+        freeShippingThreshold,
+    } = useSelector((state) => state.storeSettings);
 
-    // Mock data - In a real app, this would come from Redux or Context
-    const cartSummary = {
-        subtotal: 1249,
-        shipping: 0,
-        tax: 62,
-        total: 1311,
-        items: [
-            { id: 1, name: "Handcrafted Peri Peri Makhana", price: 249, quantity: 2, image: "🌶️", color: "bg-orange-50" },
-            { id: 2, name: "Premium Roasted Cashews", price: 751, quantity: 1, image: "🥜", color: "bg-amber-50" }
-        ]
+    useEffect(() => {
+        dispatch(fetchCart());
+        dispatch(getStoreSettings()).catch(() => { });
+        dispatch(fetchAddresses());
+
+        // Load Razorpay SDK dynamically
+        const script = document.createElement('script');
+        script.src = "https://checkout.razorpay.com/v1/checkout.js";
+        script.async = true;
+        document.body.appendChild(script);
+
+        return () => {
+            // Cleanup: remove the script tag when component unmounts
+            if (document.body.contains(script)) {
+                document.body.removeChild(script);
+            }
+        };
+    }, [dispatch]);
+
+    const applyAddressToForm = (address) => {
+        if (!address) {
+            return;
+        }
+
+        setSelectedAddressId(address.id);
+        setShippingForm({
+            name: address.name || '',
+            phone: address.phone || '',
+            street: address.street || '',
+            landmark: address.landmark || '',
+            city: address.city || '',
+            pin_code: address.pin_code || '',
+            state: address.state || '',
+            country: address.country || 'India',
+        });
     };
+
+    useEffect(() => {
+        if (defaultAddress && !selectedAddressId) {
+            applyAddressToForm(defaultAddress);
+        }
+    }, [defaultAddress, selectedAddressId]);
+
+    const subtotal = useMemo(
+        () => cartItems.reduce((acc, item) => acc + (parseFloat(item.product_price) * item.quantity), 0),
+        [cartItems]
+    );
+
+    const cartSummary = useMemo(() => {
+        const summary = calculateOrderSummary({
+            subtotal,
+            gstPercentage,
+            deliveryCharge,
+            freeShippingThreshold,
+        });
+
+        return {
+            ...summary,
+            items: cartItems,
+        };
+    }, [cartItems, subtotal, gstPercentage, deliveryCharge, freeShippingThreshold]);
 
     const steps = [
         { id: 1, label: "Shipping", icon: MapPin },
@@ -37,10 +120,125 @@ const Checkout = () => {
 
     const nextStep = () => setStep(prev => Math.min(prev + 1, 3));
     const prevStep = () => setStep(prev => Math.max(prev - 1, 1));
+    const handleShippingInputChange = (field, value) => {
+        setShippingForm((prev) => ({
+            ...prev,
+            [field]: value,
+        }));
+    };
+
+    const isShippingStepValid = [
+        shippingForm.name,
+        shippingForm.phone,
+        shippingForm.street,
+        shippingForm.city,
+        shippingForm.pin_code,
+        shippingForm.state,
+    ].every((value) => String(value || '').trim());
+
+    const handleProceed = () => {
+        if (step === 1 && !isShippingStepValid) {
+            toast.error('Please complete the shipping address first');
+            return;
+        }
+
+        nextStep();
+    };
+
+    const handleBackAction = () => {
+        if (step === 1) {
+            navigate('/profile/cart');
+            return;
+        }
+
+        prevStep();
+    };
+
+    const handleUpdateQuantity = async (itemId, quantity) => {
+        if (quantity < 1) return;
+        try {
+            await dispatch(updateQuantity({ itemId, quantity })).unwrap();
+        } catch (error) {
+            toast.error(error || 'Failed to update quantity');
+        }
+    };
+
+    const handleDeleteItem = async (itemId) => {
+        try {
+            await dispatch(deleteItem(itemId)).unwrap();
+            toast.success('Item removed from order');
+        } catch (error) {
+            toast.error(error || 'Failed to remove item');
+        }
+    };
+
+    const handleCompletePurchase = async () => {
+        if (isProcessing) return;
+        setIsProcessing(true);
+
+        try {
+            // 1. Create order in backend
+            const orderRes = await placeOrder(shippingForm);
+            const { order_id } = orderRes;
+
+            // 2. Create Razorpay order
+            const razorpayOrder = await createPaymentOrder(order_id);
+
+            // 3. Configure Razorpay options
+            const options = {
+                key: razorpayOrder.razorpay_key,
+                amount: razorpayOrder.amount, // Amount already in paise from backend
+                currency: razorpayOrder.currency,
+                name: "MomsCrunch",
+                description: "Purchase of Handcrafted Premium Cookies",
+                order_id: razorpayOrder.razorpay_order_id,
+                handler: async (response) => {
+                    try {
+                        // 4. Verify payment
+                        await verifyPayment({
+                            razorpay_order_id: response.razorpay_order_id,
+                            razorpay_payment_id: response.razorpay_payment_id,
+                            razorpay_signature: response.razorpay_signature,
+                        });
+                        toast.success('Payment Successful! Your crunch is on the way.');
+                        navigate('profile/orders'); 
+                    } catch (error) {
+                        toast.error('Payment verification failed. Please contact support.');
+                    } finally {
+                        setIsProcessing(false);
+                    }
+                },
+                prefill: {
+                    name: shippingForm.name,
+                    contact: shippingForm.phone,
+                },
+                theme: {
+                    color: "#F97316", // Primary color
+                },
+                modal: {
+                    ondismiss: () => {
+                        setIsProcessing(false);
+                    }
+                }
+            };
+
+            if (window.Razorpay) {
+                const rzp = new window.Razorpay(options);
+                rzp.open();
+            } else {
+                toast.error('Razorpay SDK not loaded. Please refresh the page.');
+                setIsProcessing(false);
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error(error.response?.data?.detail || 'Failed to initiate payment');
+            setIsProcessing(false);
+        }
+    };
 
     return (
         <div className="min-h-screen bg-background-light dark:bg-background-dark text-slate-800 dark:text-slate-200 selection:bg-primary pt-10 pb-24">
-            <div className="max-w-[1400px] mx-auto px-6">
+            <div className="max-w-[1400px] mx-auto sm:px-6">
                 {/* Header & Back Button */}
                 <div className="mb-8 md:mb-12 flex flex-col md:flex-row items-center justify-between gap-6">
                     <div className="text-center md:text-left">
@@ -99,39 +297,169 @@ const Checkout = () => {
                                 </div>
 
                                 <form className="space-y-6">
+                                    <div className="space-y-4">
+                                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                            <div>
+                                                <h3 className="text-sm font-black text-slate-900 dark:text-white">Saved Addresses</h3>
+                                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                                                    Select one to auto fill checkout details
+                                                </p>
+                                            </div>
+
+                                            <div className="flex items-center gap-3">
+                                                {defaultAddress && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => applyAddressToForm(defaultAddress)}
+                                                        className="text-[10px] font-black uppercase tracking-[0.2em] text-primary bg-primary/5 border border-primary/10 px-4 py-2 rounded-xl cursor-pointer"
+                                                    >
+                                                        Auto Fill Default
+                                                    </button>
+                                                )}
+                                                <Link
+                                                    to="/profile/addresses"
+                                                    className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 hover:text-primary transition-colors"
+                                                >
+                                                    Manage Addresses
+                                                </Link>
+                                            </div>
+                                        </div>
+
+                                        {addresses.length > 0 ? (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                {addresses.map((address) => (
+                                                    <button
+                                                        key={address.id}
+                                                        type="button"
+                                                        onClick={() => applyAddressToForm(address)}
+                                                        className={`text-left rounded-2xl border p-4 transition-all cursor-pointer ${selectedAddressId === address.id
+                                                            ? 'border-primary bg-primary/5 shadow-lg shadow-primary/10'
+                                                            : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950/40 hover:border-primary/30'
+                                                            }`}
+                                                    >
+                                                        <div className="flex items-center justify-between gap-3 mb-3">
+                                                            <span className={`px-3 py-1 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] ${address.is_default ? 'bg-primary text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
+                                                                {address.address_type}
+                                                            </span>
+                                                            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">
+                                                                {selectedAddressId === address.id ? 'Selected' : 'Use this address'}
+                                                            </span>
+                                                        </div>
+                                                        <div className="text-sm font-black text-slate-900 dark:text-white">{address.name}</div>
+                                                        <div className="text-[11px] font-bold text-slate-500 mt-1">+91 {address.phone}</div>
+                                                        <div className="text-[11px] font-bold text-slate-500 mt-3 leading-relaxed">
+                                                            {address.street}
+                                                            {address.landmark ? `, ${address.landmark}` : ''}
+                                                        </div>
+                                                        <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mt-3">
+                                                            {address.city}, {address.state} - {address.pin_code}
+                                                        </div>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 p-5 text-center">
+                                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-3">
+                                                    No saved address yet
+                                                </p>
+                                                <Link
+                                                    to="/profile/addresses"
+                                                    className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-primary"
+                                                >
+                                                    <MapPin size={14} />
+                                                    Add address first
+                                                </Link>
+                                            </div>
+                                        )}
+                                    </div>
+
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Full Name</label>
-                                            <input type="text" placeholder="John Doe" className="w-full bg-white dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl px-5 py-4 text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none shadow-sm" />
+                                            <input
+                                                type="text"
+                                                value={shippingForm.name}
+                                                onChange={(e) => handleShippingInputChange('name', e.target.value)}
+                                                placeholder="John Doe"
+                                                className="w-full bg-white dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl px-5 py-4 text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none shadow-sm"
+                                            />
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Contact Number</label>
-                                            <input type="tel" placeholder="+91 98765 43210" className="w-full bg-white dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl px-5 py-4 text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none shadow-sm" />
+                                            <input
+                                                type="tel"
+                                                value={shippingForm.phone}
+                                                onChange={(e) => handleShippingInputChange('phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
+                                                placeholder="+91 98765 43210"
+                                                className="w-full bg-white dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl px-5 py-4 text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none shadow-sm"
+                                            />
                                         </div>
                                     </div>
 
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Complete Address</label>
-                                        <textarea rows="3" placeholder="Flat/House No, Street, Area" className="w-full bg-white dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl px-5 py-4 text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none resize-none shadow-sm"></textarea>
+                                        <textarea
+                                            rows="3"
+                                            value={shippingForm.street}
+                                            onChange={(e) => handleShippingInputChange('street', e.target.value)}
+                                            placeholder="Flat/House No, Street, Area"
+                                            className="w-full bg-white dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl px-5 py-4 text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none resize-none shadow-sm"
+                                        ></textarea>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Landmark</label>
+                                            <input
+                                                type="text"
+                                                value={shippingForm.landmark}
+                                                onChange={(e) => handleShippingInputChange('landmark', e.target.value)}
+                                                placeholder="Near Central Park"
+                                                className="w-full bg-white dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl px-5 py-4 text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none shadow-sm"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Country</label>
+                                            <input
+                                                type="text"
+                                                value={shippingForm.country}
+                                                onChange={(e) => handleShippingInputChange('country', e.target.value)}
+                                                placeholder="India"
+                                                className="w-full bg-white dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl px-5 py-4 text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none shadow-sm"
+                                            />
+                                        </div>
                                     </div>
 
                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">City</label>
-                                            <input type="text" placeholder="Jaipur" className="w-full bg-white dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl px-5 py-4 text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none shadow-sm" />
+                                            <input
+                                                type="text"
+                                                value={shippingForm.city}
+                                                onChange={(e) => handleShippingInputChange('city', e.target.value)}
+                                                placeholder="Jaipur"
+                                                className="w-full bg-white dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl px-5 py-4 text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none shadow-sm"
+                                            />
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Pin Code</label>
-                                            <input type="text" placeholder="302001" className="w-full bg-white dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl px-5 py-4 text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none shadow-sm" />
+                                            <input
+                                                type="text"
+                                                value={shippingForm.pin_code}
+                                                onChange={(e) => handleShippingInputChange('pin_code', e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                                placeholder="302001"
+                                                className="w-full bg-white dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl px-5 py-4 text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none shadow-sm"
+                                            />
                                         </div>
                                         <div className="space-y-2 col-span-2 md:col-span-1">
                                             <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">State</label>
-                                            <select className="w-full bg-white dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl px-5 py-4 text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none appearance-none cursor-pointer shadow-sm">
-                                                <option>Rajasthan</option>
-                                                <option>Maharashtra</option>
-                                                <option>Delhi</option>
-                                                <option>Karnataka</option>
-                                            </select>
+                                            <input
+                                                type="text"
+                                                value={shippingForm.state}
+                                                onChange={(e) => handleShippingInputChange('state', e.target.value)}
+                                                placeholder="Rajasthan"
+                                                className="w-full bg-white dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl px-5 py-4 text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none shadow-sm"
+                                            />
                                         </div>
                                     </div>
                                 </form>
@@ -239,21 +567,31 @@ const Checkout = () => {
 
                         {/* Navigation Actions for Desktop / Mobile */}
                         <div className="flex flex-col md:flex-row items-center justify-between gap-6 pt-4">
-                            {step < 3 ? (
-                                <>
-                                    <div className="flex items-center gap-3 text-slate-400 order-2 md:order-1">
-                                        <ShieldCheck size={18} className="text-green-500" />
-                                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-center md:text-left">Guaranteed SSL Security</span>
-                                    </div>
+                            <div className="flex items-center gap-3 text-slate-400 order-3 md:order-1">
+                                <ShieldCheck size={18} className="text-green-500" />
+                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-center md:text-left">Guaranteed SSL Security</span>
+                            </div>
+
+                            <div className="w-full md:w-auto flex flex-col sm:flex-row items-stretch gap-4 order-1 md:order-2">
+                                <button
+                                    onClick={handleBackAction}
+                                    className="w-full md:w-auto bg-white dark:bg-slate-900/40 text-slate-700 dark:text-slate-200 px-10 py-5 rounded-xl font-black uppercase tracking-[0.2em] text-[11px] shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-200 dark:border-slate-800 hover:border-primary/30 hover:text-primary hover:-translate-y-1 active:scale-95 transition-all flex items-center justify-center gap-4 group cursor-pointer"
+                                >
+                                    <ChevronLeft size={18} className="group-hover:-translate-x-1.5 transition-transform" />
+                                    {step === 1 ? 'Back to Cart' : 'Go Back'}
+                                </button>
+
+                                {step < 3 ? (
                                     <button
-                                        onClick={nextStep}
-                                        className="w-full md:w-auto bg-primary text-white px-10 py-5 rounded-xl font-black uppercase tracking-[0.2em] text-[11px] shadow-2xl shadow-primary/30 hover:shadow-primary/50 hover:-translate-y-1 active:scale-95 transition-all flex items-center justify-center gap-4 group cursor-pointer order-1 md:order-2"
+                                        onClick={handleProceed}
+                                        className="w-full md:w-auto bg-primary text-white px-10 py-5 rounded-xl font-black uppercase tracking-[0.2em] text-[11px] shadow-2xl shadow-primary/30 hover:shadow-primary/50 hover:-translate-y-1 active:scale-95 transition-all flex items-center justify-center gap-4 group cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+                                        disabled={step === 1 && !isShippingStepValid}
                                     >
                                         Proceed to {step === 1 ? 'Payment' : 'Review'}
                                         <ChevronRight size={18} className="group-hover:translate-x-1.5 transition-transform" />
                                     </button>
-                                </>
-                            ) : null}
+                                ) : null}
+                            </div>
                         </div>
                     </div>
 
@@ -268,32 +606,71 @@ const Checkout = () => {
                             {/* Summary Items List */}
                             <div className="space-y-4 mb-8 max-h-[240px] overflow-y-auto pr-2 custom-scrollbar">
                                 {cartSummary.items.map((item) => (
-                                    <div key={item.id} className="flex gap-4 items-center">
-                                        <div className={`w-14 h-14 ${item.color} rounded-xl flex items-center justify-center text-2xl shadow-inner shrink-0`}>
-                                            {item.image}
+                                    <div key={item.id} className="group/item flex gap-4 items-center bg-white/40 dark:bg-slate-800/20 p-3 rounded-xl border border-transparent hover:border-slate-100 dark:hover:border-white/5 transition-all">
+                                        <div className="w-16 h-19 bg-slate-50 dark:bg-slate-800 rounded-lg overflow-hidden shadow-inner shrink-0 relative group-hover/item:scale-105 transition-transform">
+                                            <img
+                                                src={item.product_image || 'https://images.unsplash.com/photo-1589113103503-496550346c1f?q=80&w=800&auto=format&fit=crop'}
+                                                alt={item.product_name}
+                                                className="w-full h-full object-cover"
+                                            />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <h4 className="text-xs font-black text-slate-900 dark:text-white truncate">{item.name}</h4>
-                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Qty: {item.quantity} × ₹{item.price}</p>
+                                            <div className="flex items-center justify-between gap-2">
+                                                <h4 className="text-xs font-black text-start text-slate-900 dark:text-white truncate flex-1">{item.product_name}</h4>
+                                                <button
+                                                    onClick={() => handleDeleteItem(item.id)}
+                                                    className="p-1.5 rounded-lg text-slate-300 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all cursor-pointer"
+                                                    title="Remove Item"
+                                                >
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            </div>
+
+                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">₹{formatCurrency(item.product_price)} per unit</p>
+                                            <div className="flex items-center justify-between mt-2">
+
+                                                <div className="flex items-center bg-white dark:bg-slate-900 rounded-lg border border-slate-100 dark:border-slate-800 p-0.5">
+                                                    <button
+                                                        onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
+                                                        className="p-1 text-slate-400 hover:text-primary transition-colors cursor-pointer"
+                                                        disabled={item.quantity <= 1}
+                                                    >
+                                                        <Minus size={12} />
+                                                    </button>
+                                                    <span className="w-6 text-center text-[10px] font-black text-slate-900 dark:text-white tabular-nums">
+                                                        {item.quantity}
+                                                    </span>
+                                                    <button
+                                                        onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
+                                                        className="p-1 text-slate-400 hover:text-primary transition-colors cursor-pointer"
+                                                    >
+                                                        <Plus size={12} />
+                                                    </button>
+                                                </div>
+                                                <div className="text-sm font-black text-slate-900 dark:text-white tabular-nums">₹{formatCurrency(item.product_price * item.quantity)}</div>
+                                            </div>
                                         </div>
-                                        <div className="text-sm font-black text-slate-900 dark:text-white tabular-nums">₹{item.price * item.quantity}</div>
                                     </div>
                                 ))}
                             </div>
 
                             {/* Cost Breakdown */}
-                            <div className="space-y-4 border-t border-slate-100 dark:border-slate-800 pt-8 mb-8">
+                            <div className="space-y-4 border-t border-slate-100 dark:border-slate-800 pt-8 sm:mb-8">
                                 <div className="flex justify-between items-center text-sm font-bold text-slate-400 group">
                                     <span className="uppercase tracking-widest text-[10px]">Subtotal</span>
-                                    <span className="text-slate-900 dark:text-white tabular-nums">₹{cartSummary.subtotal}</span>
+                                    <span className="text-slate-900 dark:text-white tabular-nums">₹{formatCurrency(cartSummary.subtotal)}</span>
                                 </div>
                                 <div className="flex justify-between items-center text-sm font-bold text-slate-400 group">
                                     <span className="uppercase tracking-widest text-[10px]">Shipping</span>
-                                    <span className="text-green-500 uppercase tracking-widest text-[10px] font-black underline underline-offset-4 decoration-2">Free</span>
+                                    {cartSummary.shipping === 0 ? (
+                                        <span className="text-green-500 uppercase tracking-widest text-[10px] font-black underline underline-offset-4 decoration-2">Free</span>
+                                    ) : (
+                                        <span className="text-slate-900 dark:text-white tabular-nums">₹{formatCurrency(cartSummary.shipping)}</span>
+                                    )}
                                 </div>
                                 <div className="flex justify-between items-center text-sm font-bold text-slate-400 group">
-                                    <span className="uppercase tracking-widest text-[10px]">Tax (GST)</span>
-                                    <span className="text-slate-900 dark:text-white tabular-nums">₹{cartSummary.tax}</span>
+                                    <span className="uppercase tracking-widest text-[10px]">Tax (GST {formatCurrency(gstPercentage)}%)</span>
+                                    <span className="text-slate-900 dark:text-white tabular-nums">₹{formatCurrency(cartSummary.tax)}</span>
                                 </div>
 
                                 <div className="pt-6 border-t-2 border-dashed border-slate-100 dark:border-slate-800 flex justify-between items-center">
@@ -301,36 +678,26 @@ const Checkout = () => {
                                         <span className="text-slate-900 dark:text-white font-black uppercase tracking-[0.2em] text-[10px]">Grand Total</span>
                                         <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">Payable Amount</span>
                                     </div>
-                                    <span className="text-3xl font-black text-primary tabular-nums tracking-tighter">₹{cartSummary.total}</span>
+                                    <span className="text-3xl font-black text-primary tabular-nums tracking-tighter">₹{formatCurrency(cartSummary.total)}</span>
                                 </div>
                             </div>
 
                             {/* Complete Purchase Button - Desktop Only */}
                             {step === 3 && (
                                 <div className="hidden lg:block mt-8">
-                                    <button className="w-full bg-primary text-white py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-[12px] shadow-2xl shadow-primary/30 hover:shadow-primary/50 hover:-translate-y-1 active:scale-95 transition-all flex items-center justify-center gap-4 group cursor-pointer active:translate-y-0 relative overflow-hidden">
+                                    <button
+                                        onClick={handleCompletePurchase}
+                                        disabled={isProcessing}
+                                        className="w-full bg-primary text-white py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-[12px] shadow-2xl shadow-primary/30 hover:shadow-primary/50 hover:-translate-y-1 active:scale-95 transition-all flex items-center justify-center gap-4 group cursor-pointer active:translate-y-0 relative overflow-hidden disabled:opacity-50">
                                         <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-[-20deg]" />
-                                        Complete Purchase
+                                        {isProcessing ? 'Processing...' : 'Complete Purchase'}
                                         <ShieldCheck size={20} className="group-hover:rotate-12 transition-transform" />
                                     </button>
+                                    <p className="text-[9px] text-center font-bold text-slate-400 uppercase tracking-widest mt-4">
+                                        By clicking, you agree to our <Link to="/terms-and-conditions" target="_blank" className="text-primary hover:underline">Terms & Conditions</Link>
+                                    </p>
                                 </div>
                             )}
-
-                            {/* Security Badges */}
-                            <div className="mt-8 pt-8 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-lg bg-green-50 dark:bg-green-500/10 flex items-center justify-center text-green-600">
-                                        <ShieldCheck size={16} />
-                                    </div>
-                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-tight">Authentic <br />Quality Guaranteed</p>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600">
-                                        <Truck size={16} />
-                                    </div>
-                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-tight">Express <br />Doorstep Delivery</p>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -359,7 +726,7 @@ const Checkout = () => {
                                 </div>
                                 <div className="text-right">
                                     <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1">Total Amount</div>
-                                    <div className="text-2xl font-black text-primary tabular-nums tracking-tighter">₹{cartSummary.total}</div>
+                                    <div className="text-2xl font-black text-primary tabular-nums tracking-tighter">₹{formatCurrency(cartSummary.total)}</div>
                                 </div>
                             </div>
 
@@ -392,11 +759,19 @@ const Checkout = () => {
                                 </div>
                             </div>
 
-                            <button className="w-full bg-primary text-white py-4.5 rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] shadow-2xl shadow-primary/40 active:scale-95 transition-all flex items-center justify-center gap-3 relative overflow-hidden group">
+                            <button
+                                onClick={handleCompletePurchase}
+                                disabled={isProcessing}
+                                className="w-full bg-primary text-white py-4.5 rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] shadow-2xl shadow-primary/40 active:scale-95 transition-all flex items-center justify-center gap-3 relative overflow-hidden group disabled:opacity-50">
                                 <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-[-20deg]" />
-                                Complete Purchase
+                                {isProcessing ? 'Processing...' : 'Complete Purchase'}
                                 <ShieldCheck size={18} className="group-hover:rotate-12 transition-transform" />
                             </button>
+
+                            <p className="text-[8px] text-center font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
+                                By clicking, you agree to our <br />
+                                <Link to="/terms-and-conditions" target="_blank" className="text-primary hover:underline">Terms & Conditions</Link>
+                            </p>
 
                             <p className="text-[7.5px] text-center font-black text-slate-400 uppercase tracking-widest opacity-60">
                                 Secure Payment • 100% Authentic Quality

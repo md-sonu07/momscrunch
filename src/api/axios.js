@@ -1,10 +1,7 @@
 import axios from "axios";
 
-// When using Vite proxy, we use a relative URL ("") 
-// This makes requests go to http://localhost:5173/... 
-// and the proxy in vite.config.js forwards them toapi.momscrunch.com
 const baseURL = import.meta.env.VITE_API_URL || "";
-console.log("Axios Base URL (Proxy Mode):", baseURL === "" ? "Relative (Vite Proxy)" : baseURL);
+// console.log("Axios Base URL (Proxy Mode):", baseURL === "" ? "Relative (Vite Proxy)" : baseURL);
 
 const axiosApi = axios.create({
     baseURL,
@@ -35,7 +32,9 @@ axiosApi.interceptors.response.use(
         if (error.response?.status === 401) {
             console.error("Session expired or unauthorized. Logging out...");
             localStorage.removeItem("token");
+            localStorage.removeItem("refreshToken");
             localStorage.removeItem("user");
+            window.location.href = '/login';
         }
         const message = error.response?.data?.error || error.response?.data?.message || error.message;
         console.error("Api Error: ", message);

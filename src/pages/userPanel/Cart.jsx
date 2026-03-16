@@ -1,56 +1,180 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingBag, Trash2, Plus, Minus, ArrowRight, ChevronLeft, CreditCard } from 'lucide-react';
+import { useDispatch, useSelector } from 'react-redux';
+import { ShoppingBag, Trash2, Plus, Minus, ArrowRight, ChevronLeft, CreditCard, RefreshCw } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { fetchCart, updateQuantity, deleteItem } from '../../redux/thunk/cartThunk';
+import { selectCart, selectCartItems, selectCartLoading, selectCartError, clearCartError } from '../../redux/slice/cartSlice';
+import { getStoreSettings } from '../../redux/thunk/storeSettingsThunk';
+import { calculateOrderSummary, formatCurrency } from '../../utils/orderSummary';
+import Skeleton from '../../components/common/Skeleton';
 
 const Cart = () => {
     const navigate = useNavigate();
-    // Mock data for the cart
-    const [cartItems, setCartItems] = useState([
-        {
-            id: 1,
-            name: "Handcrafted Peri Peri Makhana",
-            category: "Roasted Makhana",
-            price: 199,
-            quantity: 2,
-            image: "🌶️",
-            color: "bg-red-50 dark:bg-red-500/10"
-        },
-        {
-            id: 2,
-            name: "Classic Salted Roasted Almonds",
-            category: "Premium Nuts",
-            price: 449,
-            quantity: 1,
-            image: "🥜",
-            color: "bg-orange-50 dark:bg-orange-500/10"
+    const dispatch = useDispatch();
+    const cart = useSelector(selectCart);
+    const loading = useSelector(selectCartLoading);
+    const error = useSelector(selectCartError);
+    const cartItems = useSelector(selectCartItems);
+    const {
+        gstPercentage,
+        deliveryCharge,
+        freeShippingThreshold,
+        loading: storeSettingsLoading,
+    } = useSelector((state) => state.storeSettings);
+
+    useEffect(() => {
+        dispatch(fetchCart());
+        dispatch(getStoreSettings()).catch(() => { });
+    }, [dispatch]);
+
+    const handleRefreshCart = () => {
+        dispatch(clearCartError());
+        dispatch(fetchCart());
+    };
+
+    const handleUpdateQuantity = async (itemId, newQuantity) => {
+        if (newQuantity < 1) return;
+        try {
+            await dispatch(updateQuantity({ itemId, quantity: newQuantity })).unwrap();
+        } catch (error) {
+            toast.error(error || 'Failed to update quantity', {
+                style: {
+                    borderRadius: '16px',
+                    background: '#dc2626',
+                    color: '#fff',
+                    fontWeight: 'bold',
+                    fontSize: '12px'
+                },
+            });
         }
-    ]);
-
-    const updateQuantity = (id, delta) => {
-        setCartItems(prev => prev.map(item =>
-            item.id === id ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item
-        ));
     };
 
-    const removeItem = (id) => {
-        const item = cartItems.find(i => i.id === id);
-        setCartItems(prev => prev.filter(item => item.id !== id));
-        toast.success(`${item?.name} removed from bag`, {
-            style: {
-                borderRadius: '16px',
-                background: '#0f172a',
-                color: '#fff',
-                fontWeight: 'bold',
-                fontSize: '12px'
-            },
-        });
+    const handleRemoveItem = async (itemId, name) => {
+        try {
+            await dispatch(deleteItem(itemId)).unwrap();
+            toast.success(`${name} removed from bag`, {
+                style: {
+                    borderRadius: '16px',
+                    background: '#0f172a',
+                    color: '#fff',
+                    fontWeight: 'bold',
+                    fontSize: '12px'
+                },
+            });
+        } catch (error) {
+            toast.error(error || 'Failed to remove item', {
+                style: {
+                    borderRadius: '16px',
+                    background: '#dc2626',
+                    color: '#fff',
+                    fontWeight: 'bold',
+                    fontSize: '12px'
+                },
+            });
+        }
     };
 
-    const subtotal = cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-    const shipping = subtotal > 500 ? 0 : 49;
-    const tax = Math.round(subtotal * 0.05); // 5% GST
-    const total = subtotal + shipping + tax;
+    const subtotal = useMemo(
+        () => cartItems.reduce((acc, item) => acc + (parseFloat(item.product_price) * item.quantity), 0),
+        [cartItems]
+    );
+    const summary = useMemo(
+        () => calculateOrderSummary({
+            subtotal,
+            gstPercentage,
+            deliveryCharge,
+            freeShippingThreshold,
+        }),
+        [subtotal, gstPercentage, deliveryCharge, freeShippingThreshold]
+    );
+
+    // Error state
+    if (error && !loading) {
+        return (
+            <div className="min-h-[80vh] flex flex-col items-center justify-center p-6 text-center animate-in fade-in zoom-in duration-500">
+                <div className="w-24 h-24 bg-red-50 dark:bg-red-900/20 rounded-3xl flex items-center justify-center mb-8 border border-red-100 dark:border-red-800 shadow-xl">
+                    <ShoppingBag size={40} className="text-red-300 dark:text-red-600" />
+                </div>
+                <h1 className="text-2xl font-black text-slate-900 dark:text-white mb-4 tracking-tight">Cart Error</h1>
+                <p className="text-slate-500 dark:text-slate-400 font-bold text-sm max-w-md mb-8 leading-relaxed">
+                    {error}
+                </p>
+                <div className="flex gap-4">
+                    <button
+                        onClick={handleRefreshCart}
+                        className="bg-primary text-white px-8 py-3 rounded-xl font-black uppercase tracking-[0.2em] text-[11px] shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+                    >
+                        <RefreshCw size={16} />
+                        Try Again
+                    </button>
+                    <Link to="/shop" className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-8 py-3 rounded-xl font-black uppercase tracking-[0.2em] text-[11px] hover:scale-105 active:scale-95 transition-all">
+                        Continue Shopping
+                    </Link>
+                </div>
+            </div>
+        );
+    }
+
+    if (loading && !cart) {
+        return (
+            <div className="min-h-screen bg-background-light dark:bg-background-dark pt-10 pb-24">
+                <div className="max-w-[1600px] mx-auto pb-10">
+                    <div className="mb-12 border-b border-slate-100 dark:border-slate-800 pb-8">
+                        <Skeleton variant="title" width="220px" height="32px" className="mb-2" />
+                        <Skeleton variant="text" width="150px" />
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-5 gap-12">
+                        <div className="lg:col-span-3 space-y-4">
+                            {[1, 2, 3].map((i) => (
+                                <div key={i} className="bg-white/70 dark:bg-slate-900/40 border border-white dark:border-slate-800 rounded-xl p-3 flex gap-5 items-center">
+                                    <Skeleton variant="rectangular" width="120px" height="120px" className="rounded-2xl" />
+                                    <div className="flex-1 space-y-3">
+                                        <div className="space-y-1">
+                                            <Skeleton variant="text" width="60px" />
+                                            <Skeleton variant="title" width="200px" height="20px" />
+                                            <Skeleton variant="text" width="100px" />
+                                        </div>
+                                        <div className="h-px w-full bg-slate-100 dark:bg-slate-800/50" />
+                                        <div className="flex justify-between items-center">
+                                            <Skeleton variant="rectangular" width="80px" height="32px" className="rounded-lg" />
+                                            <Skeleton variant="title" width="100px" height="24px" />
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="lg:col-span-2">
+                            <div className="bg-white/70 dark:bg-slate-900/40 border border-white dark:border-slate-800 rounded-2xl p-8 sticky top-32">
+                                <Skeleton variant="title" width="150px" height="24px" className="mb-8" />
+                                <div className="space-y-4 mb-8">
+                                    <div className="flex justify-between">
+                                        <Skeleton variant="text" width="80px" />
+                                        <Skeleton variant="text" width="60px" />
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <Skeleton variant="text" width="80px" />
+                                        <Skeleton variant="text" width="60px" />
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <Skeleton variant="text" width="80px" />
+                                        <Skeleton variant="text" width="60px" />
+                                    </div>
+                                    <div className="pt-6 border-t border-slate-100 dark:border-slate-800 flex justify-between">
+                                        <Skeleton variant="text" width="100px" />
+                                        <Skeleton variant="title" width="120px" height="32px" />
+                                    </div>
+                                </div>
+                                <Skeleton variant="rectangular" width="100%" height="56px" className="rounded-xl mb-6" />
+                                <Skeleton variant="text" width="120px" className="mx-auto" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     if (cartItems.length === 0) {
         return (
@@ -86,12 +210,22 @@ const Cart = () => {
                         </div>
                     </div>
 
-                    {subtotal > 500 && (
-                        <div className="flex items-center gap-2 bg-green-500/10 text-green-600 dark:text-green-500/80 px-4 py-2 rounded-xl border border-green-500/20 text-[10px] font-black uppercase tracking-widest w-fit">
-                            <div className="w-1 h-1 bg-green-500 rounded-full"></div>
-                            Free Shipping Eligible
-                        </div>
-                    )}
+                    <div className="flex items-center gap-4">
+                        {summary.freeShippingEligible && (
+                            <div className="flex items-center gap-2 bg-green-500/10 text-green-600 dark:text-green-500/80 px-4 py-2 rounded-xl border border-green-500/20 text-[10px] font-black uppercase tracking-widest w-fit">
+                                <div className="w-1 h-1 bg-green-500 rounded-full"></div>
+                                Free Shipping Eligible
+                            </div>
+                        )}
+                        <button
+                            onClick={handleRefreshCart}
+                            disabled={loading}
+                            className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                        >
+                            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+                            Refresh
+                        </button>
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-5 gap-12">
@@ -100,19 +234,23 @@ const Cart = () => {
                         {cartItems.map((item) => (
                             <div key={item.id} className="bg-white/70 dark:bg-slate-900/40 backdrop-blur-2xl border border-white dark:border-slate-800 rounded-xl p-3 shadow-xl shadow-slate-200/50 dark:shadow-none grid grid-cols-[120px_1fr] gap-x-5 items-center relative group transition-all hover:border-primary/20">
                                 {/* Left side: Image */}
-                                <div className={`aspect-square ${item.color} rounded-2xl flex items-center justify-center text-4xl shadow-inner`}>
-                                    {item.image}
+                                <div className="aspect-square bg-slate-50 dark:bg-slate-800 rounded-2xl flex items-center justify-center text-4xl shadow-inner overflow-hidden">
+                                    <img
+                                        src={item.product_image || 'https://images.unsplash.com/photo-1589113103503-496550346c1f?q=80&w=800&auto=format&fit=crop'}
+                                        alt={item.product_name}
+                                        className="w-full h-full object-cover"
+                                    />
                                 </div>
 
                                 {/* Right side: Details & Controls */}
                                 <div className="flex flex-col justify-between py-0.5">
                                     {/* Top Section: Category, Name & Price */}
                                     <div className="pr-10">
-                                        <div className="text-[10px] font-black text-primary uppercase tracking-widest mb-0.5">{item.category}</div>
+                                        <div className="text-[10px] font-black text-primary uppercase tracking-widest mb-0.5">{item.weight}</div>
                                         <h3 className="text-base font-black text-slate-900 dark:text-white tracking-tight leading-tight mb-0.5">
-                                            {item.name}
+                                            {item.product_name}
                                         </h3>
-                                        <div className="text-[11px] font-bold text-slate-400">₹{item.price} / unit</div>
+                                        <div className="text-[11px] font-bold text-slate-400">₹{item.product_price} / unit</div>
                                     </div>
 
                                     {/* Divider */}
@@ -123,7 +261,7 @@ const Cart = () => {
                                         {/* Compact Quantity Toggle */}
                                         <div className="flex items-center bg-slate-50 dark:bg-slate-800 rounded-lg p-0.5 border border-slate-100 dark:border-slate-700">
                                             <button
-                                                onClick={() => updateQuantity(item.id, -1)}
+                                                onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
                                                 className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-primary hover:bg-white dark:hover:bg-slate-700 rounded-md transition-colors active:scale-90"
                                             >
                                                 <Minus size={12} />
@@ -134,20 +272,20 @@ const Cart = () => {
                                             </span>
 
                                             <button
-                                                onClick={() => updateQuantity(item.id, 1)}
+                                                onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
                                                 className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-primary hover:bg-white dark:hover:bg-slate-700 rounded-md transition-colors active:scale-90"
                                             >
                                                 <Plus size={12} />
                                             </button>
                                         </div>
 
-                                        <div className="text-xl font-black text-slate-900 dark:text-white tabular-nums">₹{item.price * item.quantity}</div>
+                                        <div className="text-xl font-black text-slate-900 dark:text-white tabular-nums">₹{parseFloat(item.product_price) * item.quantity}</div>
                                     </div>
                                 </div>
 
                                 {/* Floating Remove Button */}
                                 <button
-                                    onClick={() => removeItem(item.id)}
+                                    onClick={() => handleRemoveItem(item.id, item.product_name)}
                                     className="absolute top-4 right-4 p-1.5 text-red-500/40 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-all"
                                     title="Remove Item"
                                 >
@@ -172,23 +310,25 @@ const Cart = () => {
                             <div className="space-y-4 mb-8">
                                 <div className="flex justify-between items-center text-sm font-bold text-slate-500">
                                     <span className="uppercase tracking-widest text-[10px]">Subtotal</span>
-                                    <span className="text-slate-900 dark:text-white tabular-nums">₹{subtotal}</span>
+                                    <span className="text-slate-900 dark:text-white tabular-nums">₹{formatCurrency(summary.subtotal)}</span>
                                 </div>
                                 <div className="flex justify-between items-center text-sm font-bold text-slate-500">
                                     <span className="uppercase tracking-widest text-[10px]">Shipping</span>
-                                    {shipping === 0 ? (
+                                    {storeSettingsLoading ? (
+                                        <span className="text-slate-900 dark:text-white tabular-nums">...</span>
+                                    ) : summary.shipping === 0 ? (
                                         <span className="text-green-500 uppercase tracking-widest text-[10px] font-black underline underline-offset-4 decoration-2">Free</span>
                                     ) : (
-                                        <span className="text-slate-900 dark:text-white tabular-nums">₹{shipping}</span>
+                                        <span className="text-slate-900 dark:text-white tabular-nums">₹{formatCurrency(summary.shipping)}</span>
                                     )}
                                 </div>
                                 <div className="flex justify-between items-center text-sm font-bold text-slate-500">
-                                    <span className="uppercase tracking-widest text-[10px]">Tax (GST)</span>
-                                    <span className="text-slate-900 dark:text-white tabular-nums">₹{tax}</span>
+                                    <span className="uppercase tracking-widest text-[10px]">Tax (GST {formatCurrency(gstPercentage)}%)</span>
+                                    <span className="text-slate-900 dark:text-white tabular-nums">₹{formatCurrency(summary.tax)}</span>
                                 </div>
                                 <div className="pt-6 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center mt-2">
                                     <span className="text-slate-900 dark:text-white font-black uppercase tracking-[0.2em] text-xs">Total Amount</span>
-                                    <span className="text-3xl font-black text-primary tabular-nums">₹{total}</span>
+                                    <span className="text-3xl font-black text-primary tabular-nums">₹{formatCurrency(summary.total)}</span>
                                 </div>
                             </div>
 
@@ -211,5 +351,6 @@ const Cart = () => {
         </div>
     );
 };
+
 
 export default Cart;

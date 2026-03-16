@@ -9,10 +9,15 @@ import Contact from '../pages/userPanel/Contact';
 import Profile from '../pages/userPanel/Profile';
 import Cart from '../pages/userPanel/Cart';
 import ActiveOrders from '../pages/userPanel/ActiveOrders';
+import OrderDetail from '../pages/userPanel/OrderDetail';
 import Wishlist from '../pages/userPanel/Wishlist';
 import Addresses from '../pages/userPanel/Addresses';
 import Settings from '../pages/userPanel/Settings';
+import Wallet from '../pages/userPanel/Wallet';
 import Checkout from '../pages/userPanel/Checkout';
+import ProductDetail from '../pages/userPanel/ProductDetail';
+import TermsAndConditions from '../pages/userPanel/TermsAndConditions';
+import NotFound from '../pages/userPanel/NotFound';
 
 import ProtectedRoute from '../components/common/ProtectedRoute';
 
@@ -21,22 +26,28 @@ const AppRoutes = () => {
         <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/shop" element={<Shop />} />
+            <Route path="/product/:id" element={<ProductDetail />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/our-story" element={<OurStory />} />
             <Route path="/contact" element={<Contact />} />
+            <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
 
             {/* Protected Routes */}
             <Route element={<ProtectedRoute />}>
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/profile/cart" element={<Cart />} />
                 <Route path="/profile/orders" element={<ActiveOrders />} />
+                <Route path="/profile/orders/:id" element={<OrderDetail />} />
                 <Route path="/profile/wishlist" element={<Wishlist />} />
                 <Route path="/profile/addresses" element={<Addresses />} />
                 <Route path="/profile/settings" element={<Settings />} />
+                <Route path="/profile/wallet" element={<Wallet />} />
                 <Route path="/checkout" element={<Checkout />} />
             </Route>
 
+            {/* 404 Route */}
+            <Route path="*" element={<NotFound />} />
         </Routes>
     );
 };

@@ -3,8 +3,10 @@ import { useSelector, useDispatch } from 'react-redux'
 import { toggleTheme } from '../../redux/slice/themeSlice'
 import { openSearch, closeSearch, setSearchQuery } from '../../redux/slice/searchSlice'
 import { setLocation } from '../../redux/slice/locationSlice'
+import { fetchCart } from '../../redux/thunk/cartThunk'
+import { selectCartItemCount } from '../../redux/slice/cartSlice'
 import { Search, ShoppingCart, Sun, Moon, User, MapPin, X } from 'lucide-react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 import SearchDropdown from './SearchDropdown'
 import PincodePopup from '../common/PincodePopup'
 import { toast } from 'react-hot-toast'
@@ -13,7 +15,8 @@ const Navbar = () => {
     const isDarkMode = useSelector((state) => state.theme.mode === 'dark')
     const { query, isOpen } = useSelector((state) => state.search)
     const { currentLocation } = useSelector((state) => state.location)
-    const { user } = useSelector((state) => state.auth)
+    const { user, isAuthenticated } = useSelector((state) => state.auth)
+    const cartItemCount = useSelector(selectCartItemCount)
     const dispatch = useDispatch()
     const location = useLocation()
     const [isPincodeModalOpen, setIsPincodeModalOpen] = useState(false);
@@ -58,6 +61,13 @@ const Navbar = () => {
         dispatch(closeSearch());
         dispatch(setSearchQuery(''));
     }, [location.pathname, dispatch]);
+
+    // Fetch cart data when user is logged in
+    useEffect(() => {
+        if (isAuthenticated) {
+            dispatch(fetchCart());
+        }
+    }, [isAuthenticated, dispatch]);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -106,16 +116,21 @@ const Navbar = () => {
                     </div>
                 </Link>
 
-                <nav className="hidden md:flex items-center gap-3 xl:gap-7">
-                    <Link className="nav-link text-slate-700 dark:text-slate-200 text-sm font-bold hover:text-primary transition-colors inline-flex items-center gap-1.5"
-                        to="/shop">
-                        Shop
-                        <span className="flex h-1.5 w-1.5 rounded-full bg-primary animate-pulse"></span>
-                    </Link>
-                    <Link className="nav-link text-slate-700 text-nowrap dark:text-slate-200 text-sm font-bold hover:text-primary transition-colors"
-                        to="/our-story">Our Story</Link>
-                    <Link className="nav-link text-slate-700 dark:text-slate-200 text-sm font-bold hover:text-primary transition-colors"
-                        to="/contact">Contact</Link>
+                    <nav className="hidden md:flex items-center gap-3 xl:gap-7">
+                        <NavLink
+                            to="/shop" className={({ isActive }) => {
+                                const isShopActive = isActive || window.location.pathname.startsWith('/product/');
+                                return `nav-link dark:text-slate-200 text-sm font-bold hover:text-primary transition-colors inline-flex items-center gap-1.5 ${isShopActive ? 'active text-primary' : ''}`;
+                            }}>
+                            Shop
+                            <span className="flex h-1.5 w-1.5 rounded-full bg-primary animate-pulse"></span>
+                        </NavLink>
+                        <NavLink
+                            to="/our-story" className={({ isActive }) => `nav-link text-nowrap dark:text-slate-200 text-sm font-bold hover:text-primary transition-colors ${isActive ? 'active text-primary' : ''}`}
+                        >Our Story</NavLink>
+                        <NavLink
+                            to="/contact" className={({ isActive }) => `nav-link dark:text-slate-200 text-sm font-bold hover:text-primary transition-colors ${isActive ? 'active text-primary' : ''}`}
+                    >Contact</NavLink>
                 </nav>
             </div>
 
@@ -188,10 +203,12 @@ const Navbar = () => {
                         className="relative hidden md:flex items-center cursor-pointer justify-center size-10 text-slate-500 dark:text-slate-400 hover:text-primary transition-all duration-300 group"
                     >
                         <ShoppingCart className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
-                        <span
-                            className="absolute top-1 right-1 bg-primary text-white text-[9px] font-black h-4.5 min-w-[18px] px-1 rounded-full flex items-center justify-center shadow-lg shadow-primary/30 border-2 border-white dark:border-background-dark group-hover:-translate-y-0.5 transition-all duration-300">
-                            2
-                        </span>
+                        {cartItemCount > 0 && (
+                            <span
+                                className="absolute top-1 right-1 bg-primary text-white text-[9px] font-black h-4.5 min-w-[18px] px-1 rounded-full flex items-center justify-center shadow-lg shadow-primary/30 border-2 border-white dark:border-background-dark group-hover:-translate-y-0.5 transition-all duration-300">
+                                {cartItemCount > 99 ? '99+' : cartItemCount}
+                            </span>
+                        )}
                     </Link>
 
                     {/* Profile User */}

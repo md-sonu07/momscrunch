@@ -1,19 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useSearchParams } from 'react-router-dom';
 import { getProducts } from '../../redux/thunk/productThunk';
 import { getCategories, getSubCategories } from '../../redux/thunk/categoryThunk';
 import ProductCard from '../../components/common/ProductCard';
 import { Search, SlidersHorizontal, PackageSearch } from 'lucide-react';
+import Skeleton from '../../components/common/Skeleton';
 
 const Shop = () => {
     const dispatch = useDispatch();
     const { products, loading: productsLoading } = useSelector((state) => state.product);
     const { categories: dynamicCategories, subCategories, loading: categoriesLoading } = useSelector((state) => state.category);
 
-    console.log("products :", products);
-    console.log("dynamicCategories :", dynamicCategories);
+    const [searchParams] = useSearchParams();
+    const initialCategory = searchParams.get('category') || "All";
+    const initialSubCategory = searchParams.get('subcategory') || null;
 
-    const [selectedCategory, setSelectedCategory] = useState("All");
+    const [selectedCategory, setSelectedCategory] = useState(initialCategory);
+    const [selectedSubCategory, setSelectedSubCategory] = useState(initialSubCategory);
     const [searchQuery, setSearchQuery] = useState("");
     const [sortBy, setSortBy] = useState("Popularity");
     const [isSortOpen, setIsSortOpen] = useState(false);
@@ -28,12 +32,22 @@ const Shop = () => {
 
     const filteredProducts = products
         .filter(product => {
-            if (selectedCategory === "All") return product.name.toLowerCase().includes(searchQuery.toLowerCase());
+            const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
+            if (!matchesSearch) return false;
+
+            if (selectedCategory === "All") return true;
 
             // Find current category ID
-            const categoryId = dynamicCategories.find(c => c.name === selectedCategory)?.id;
+            const categoryObj = dynamicCategories.find(c => c.name === selectedCategory);
+            const categoryId = categoryObj?.id;
 
-            // Find subcategories belonging to this category
+            // If subcategory is selected, filter strictly by it
+            if (selectedSubCategory) {
+                return product.subcategory_name === selectedSubCategory ||
+                    subCategories.find(s => s.name === selectedSubCategory)?.id === product.subcategory;
+            }
+
+            // Otherwise, filter by the whole category (including all its subcategories)
             const allowedSubCategoryIds = subCategories
                 .filter(sub => sub.category === categoryId)
                 .map(sub => sub.id);
@@ -42,8 +56,7 @@ const Shop = () => {
                 product.category_name === selectedCategory ||
                 allowedSubCategoryIds.includes(product.subcategory);
 
-            const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
-            return matchesCategory && matchesSearch;
+            return matchesCategory;
         })
         .sort((a, b) => {
             if (sortBy === "Newest First") return b.id - a.id;
@@ -56,15 +69,54 @@ const Shop = () => {
 
     if (productsLoading || categoriesLoading) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen space-y-4">
-                <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-                <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Fetching Collection...</p>
+            <div className="bg-background-light dark:bg-background-dark min-h-screen pb-20">
+                <main className="flex-1 w-full max-w-7xl mx-auto px-4 md:px-10 py-10 pt-20">
+                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+                        <div className="space-y-4">
+                            <Skeleton variant="text" width="100px" />
+                            <Skeleton variant="title" width="300px" height="40px" />
+                        </div>
+                        <Skeleton variant="text" width="150px" />
+                    </div>
+
+                    <div className="flex flex-col lg:flex-row gap-10">
+                        <aside className="lg:w-64 shrink-0 space-y-8">
+                            <Skeleton variant="rectangular" height="50px" className="rounded-xl" />
+                            <div className="space-y-4">
+                                <Skeleton variant="text" width="100px" />
+                                <div className="space-y-2">
+                                    {[1, 2, 3, 4, 5].map(i => (
+                                        <Skeleton key={i} variant="rectangular" height="45px" className="rounded-xl" />
+                                    ))}
+                                </div>
+                            </div>
+                        </aside>
+
+                        <div className="flex-1">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-8">
+                                {[1, 2, 3, 4, 5, 6].map(i => (
+                                    <div key={i} className="bg-white dark:bg-slate-900/40 rounded-3xl p-4 border border-slate-100 dark:border-slate-800 space-y-4">
+                                        <Skeleton variant="rectangular" height="200px" className="rounded-2xl" />
+                                        <div className="space-y-2 px-2">
+                                            <Skeleton variant="title" width="70%" />
+                                            <Skeleton variant="text" width="40%" />
+                                            <div className="flex justify-between items-center pt-2">
+                                                <Skeleton variant="text" width="60px" />
+                                                <Skeleton variant="rectangular" width="40px" height="40px" className="rounded-xl" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </main>
             </div>
         );
     }
 
     return (
-        <div className="bg-background-light dark:bg-background-dark min-h-screen text-slate-900 dark:text-slate-100 antialiased flex flex-col">
+        <div className="bg-background-light dark:bg-background-dark min-h-screen text-slate-900 dark:text-slate-100 antialiased flex flex-col  pb-20">
 
             <main className="flex-1 w-full max-w-7xl mx-auto px-4 md:px-10 py-4">
                 {/* Header Section */}
@@ -106,7 +158,10 @@ const Shop = () => {
                                 <h3 className="font-black text-[10px] uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">Categories</h3>
                                 {selectedCategory !== "All" && (
                                     <button
-                                        onClick={() => setSelectedCategory("All")}
+                                        onClick={() => {
+                                            setSelectedCategory("All");
+                                            setSelectedSubCategory(null);
+                                        }}
                                         className="text-[10px] cursor-pointer font-black text-primary hover:opacity-80 transition-opacity"
                                     >
                                         CLEAR
@@ -115,7 +170,10 @@ const Shop = () => {
                             </div>
                             <div className="flex lg:flex-col gap-2 overflow-x-auto pb-2 lg:pb-0 -mx-4 px-4 lg:mx-0 lg:px-0 hide-scrollbar">
                                 <button
-                                    onClick={() => setSelectedCategory("All")}
+                                    onClick={() => {
+                                        setSelectedCategory("All");
+                                        setSelectedSubCategory(null);
+                                    }}
                                     className={`px-5 py-3 cursor-pointer rounded-xl text-xs font-bold transition-all duration-300 ease-in-out text-left flex items-center justify-between border whitespace-nowrap shrink-0 ${selectedCategory === "All"
                                         ? "bg-primary text-white border-primary shadow-lg shadow-primary/20"
                                         : "bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-100 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800"
@@ -127,22 +185,42 @@ const Shop = () => {
                                     </span>
                                 </button>
                                 {dynamicCategories.map(cat => (
-                                    <button
-                                        key={cat.id}
-                                        onClick={() => setSelectedCategory(cat.name)}
-                                        className={`px-5 py-3 cursor-pointer rounded-xl text-xs font-bold transition-all duration-300 ease-in-out text-left flex items-center justify-between border whitespace-nowrap shrink-0 ${selectedCategory === cat.name
-                                            ? "bg-primary text-white border-primary shadow-lg shadow-primary/20"
-                                            : "bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-100 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800"
-                                            }`}
-                                    >
-                                        <span className="mr-3">{cat.name}</span>
-                                        <span className={`text-[10px] opacity-40 ${selectedCategory === cat.name ? 'opacity-80' : ''}`}>
-                                            {products.filter(p => {
-                                                const subIds = subCategories.filter(s => s.category === cat.id).map(s => s.id);
-                                                return p.category === cat.id || p.category_name === cat.name || subIds.includes(p.subcategory);
-                                            }).length}
-                                        </span>
-                                    </button>
+                                    <div key={cat.id} className="flex flex-col gap-2">
+                                        <button
+                                            onClick={() => {
+                                                setSelectedCategory(cat.name);
+                                                setSelectedSubCategory(null);
+                                            }}
+                                            className={`px-5 py-3 cursor-pointer rounded-xl text-xs font-bold transition-all duration-300 ease-in-out text-left flex items-center justify-between border whitespace-nowrap shrink-0 ${selectedCategory === cat.name
+                                                ? "bg-primary text-white border-primary shadow-lg shadow-primary/20"
+                                                : "bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-100 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800"
+                                                }`}
+                                        >
+                                            <span className="mr-3">{cat.name}</span>
+                                            <span className={`text-[10px] opacity-40 ${selectedCategory === cat.name ? 'opacity-80' : ''}`}>
+                                                {products.filter(p => {
+                                                    const subIds = subCategories.filter(s => s.category === cat.id).map(s => s.id);
+                                                    return p.category === cat.id || p.category_name === cat.name || subIds.includes(p.subcategory);
+                                                }).length}
+                                            </span>
+                                        </button>
+
+                                        {/* Show subcategories if parent category is selected */}
+                                        {selectedCategory === cat.name && (
+                                            <div className="flex flex-col gap-1 ml-4 border-l border-slate-100 dark:border-slate-800 pl-3 mb-2 animate-in slide-in-from-left-2 duration-200">
+                                                {subCategories.filter(s => s.category === cat.id).map(sub => (
+                                                    <button
+                                                        key={sub.id}
+                                                        onClick={() => setSelectedSubCategory(sub.name)}
+                                                        className={`text-[11px] font-bold text-left py-1.5 transition-colors ${selectedSubCategory === sub.name ? 'text-primary' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+                                                            }`}
+                                                    >
+                                                        {sub.name}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
                                 ))}
                             </div>
                         </div>

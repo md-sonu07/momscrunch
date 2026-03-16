@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Mail, Lock, User, UserPlus, Eye, EyeOff, ArrowRight, Github, Chrome, ShieldCheck } from 'lucide-react';
+import { Mail, Lock, User, UserPlus, Eye, EyeOff, ArrowRight, Github, Chrome, ShieldCheck, Phone } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useDispatch, useSelector } from 'react-redux';
-import { sendOtp, verifyOtp, signup } from '../../redux/thunk/authThunk';
+import { sendOtp, signup } from '../../redux/thunk/authThunk';
 import { clearError } from '../../redux/slice/authSlice';
 
 const Signup = () => {
@@ -22,9 +22,11 @@ const Signup = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [isOtpSent, setIsOtpSent] = useState(false);
     const [otp, setOtp] = useState('');
+    const [sessionId, setSessionId] = useState('');
     const [formData, setFormData] = useState({
         fullName: '',
         email: '',
+        mobile_no: '',
         password: '',
         confirmPassword: '',
         acceptTerms: false
@@ -32,15 +34,22 @@ const Signup = () => {
 
     const handleSendOtp = async (e) => {
         e.preventDefault();
-        if (!formData.email) {
-            toast.error("Please enter your email first");
+        if (!formData.email || !formData.fullName || !formData.mobile_no || !formData.password) {
+            toast.error("Please fill in all fields first");
             return;
         }
 
         try {
-            const resultAction = await dispatch(sendOtp(formData.email));
+            const registrationData = {
+                name: formData.fullName,
+                email: formData.email,
+                mobile_no: formData.mobile_no,
+                password: formData.password
+            };
+            const resultAction = await dispatch(sendOtp(registrationData));
             if (sendOtp.fulfilled.match(resultAction)) {
                 setIsOtpSent(true);
+                setSessionId(resultAction.payload.session_id);
                 toast.success("OTP sent to your email!");
             } else {
                 toast.error(resultAction.payload || "Failed to send OTP");
@@ -69,24 +78,20 @@ const Signup = () => {
         }
 
         try {
-            // First verify OTP
-            const verifyAction = await dispatch(verifyOtp({ email: formData.email, otp }));
-            if (verifyOtp.fulfilled.match(verifyAction)) {
-                // If OTP is verified, proceed with signup
-                const signupAction = await dispatch(signup({
-                    name: formData.fullName,
-                    email: formData.email,
-                    password: formData.password
-                }));
+            // Verify and register in one step
+            const signupAction = await dispatch(signup({
+                session_id: sessionId,
+                otp: otp,
+                username: formData.email,
+                first_name: formData.fullName,
+                password: formData.password
+            }));
 
-                if (signup.fulfilled.match(signupAction)) {
-                    toast.success("Account created successfully!");
-                    navigate(from, { replace: true });
-                } else {
-                    toast.error(signupAction.payload || "Signup failed");
-                }
+            if (signup.fulfilled.match(signupAction)) {
+                toast.success("Account created successfully!");
+                navigate(from, { replace: true });
             } else {
-                toast.error(verifyAction.payload || "Invalid OTP");
+                toast.error(signupAction.payload || "Signup failed");
             }
         } catch (error) {
             toast.error("An error occurred during verification.");
@@ -94,7 +99,7 @@ const Signup = () => {
     };
 
     return (
-        <div className="min-h-screen bg-background-light dark:bg-background-dark flex items-center justify-center p-6 relative overflow-hidden selection:bg-primary selection:text-white pt-20">
+        <div className="min-h-screen bg-background-light dark:bg-background-dark flex items-center justify-center sm:p-6 p-2 relative overflow-hidden selection:bg-primary selection:text-white pt-10 pb-34">
             {/* Background Decorative Blobs */}
             <div className="absolute top-[-10%] right-[-10%] w-[45%] h-[45%] bg-primary/10 rounded-3xl blur-[140px] -z-10 animate-pulse"></div>
             <div className="absolute bottom-[-10%] left-[-10%] w-[45%] h-[45%] bg-orange-500/10 rounded-3xl blur-[140px] -z-10 animate-pulse" style={{ animationDelay: '2s' }}></div>
@@ -124,6 +129,25 @@ const Signup = () => {
                                     value={formData.fullName}
                                     onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                                     placeholder="Jane Doe"
+                                    className="w-full bg-slate-50 dark:bg-slate-800/50 border border-transparent focus:border-primary/30 rounded-xl pl-12 pr-6 py-4 text-sm font-bold outline-none transition-all placeholder:text-slate-300 dark:placeholder:text-slate-600 dark:text-white disabled:opacity-50"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Mobile Number Field */}
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Mobile Number</label>
+                            <div className="relative group">
+                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">
+                                    <Phone size={18} />
+                                </div>
+                                <input
+                                    type="tel"
+                                    required
+                                    disabled={isOtpSent}
+                                    value={formData.mobile_no}
+                                    onChange={(e) => setFormData({ ...formData, mobile_no: e.target.value })}
+                                    placeholder="9876543210"
                                     className="w-full bg-slate-50 dark:bg-slate-800/50 border border-transparent focus:border-primary/30 rounded-xl pl-12 pr-6 py-4 text-sm font-bold outline-none transition-all placeholder:text-slate-300 dark:placeholder:text-slate-600 dark:text-white disabled:opacity-50"
                                 />
                             </div>
@@ -237,7 +261,7 @@ const Signup = () => {
                                     <svg size="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3"><polyline points="20 6 9 17 4 12"></polyline></svg>
                                 </div>
                             </div>
-                            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 select-none uppercase tracking-widest leading-none pt-0.5">I agree to the <a href="#" className="text-primary hover:underline">Terms & Conditions</a></span>
+                            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 select-none uppercase tracking-widest leading-none pt-0.5">I agree to the <Link to="/terms-and-conditions" target="_blank" className="text-primary hover:underline">Terms & Conditions</Link></span>
                         </label>
 
                         {/* Submit Button */}

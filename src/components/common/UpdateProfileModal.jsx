@@ -1,38 +1,52 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, User, Mail, MapPin, Phone, Camera, Save, ArrowRight } from 'lucide-react';
+import { X, User, Mail, MapPin, Phone, Camera, Save, ArrowRight, Lock, Eye, EyeOff, KeyRound } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { useDispatch } from 'react-redux';
+import { changePassword } from '../../redux/thunk/userThunk';
 
 const UpdateProfileModal = ({ isOpen, onClose, onSave, userData }) => {
     const [formData, setFormData] = useState({
-        name: '',
+        first_name: '',
+        last_name: '',
         email: '',
-        location: '',
-        phone: '',
-        avatar: '',
-        image: ''
+        mobile_no: '',
+        profile_pic: ''
     });
 
+    const [loading, setLoading] = useState(false);
+    const [previewImage, setPreviewImage] = useState('');
     const fileInputRef = useRef(null);
+    const dispatch = useDispatch();
+
+    // Password change states
+    const [isChangingPassword, setIsChangingPassword] = useState(false);
+    const [showPasswords, setShowPasswords] = useState(false);
+    const [passwordData, setPasswordData] = useState({
+        old_password: '',
+        new_password: '',
+        confirm_password: ''
+    });
 
     useEffect(() => {
         if (userData) {
             setFormData({
-                name: userData.name || '',
+                first_name: userData.first_name || '',
+                last_name: userData.last_name || '',
                 email: userData.email || '',
-                location: userData.location || '',
-                phone: userData.phone || '+91 98765 43210', // Default mock phone
-                avatar: userData.avatar || '',
-                image: userData.image || ''
+                mobile_no: userData.mobile_no || '',
+                profile_pic: userData.profile_pic || ''
             });
+            setPreviewImage(userData.profile_pic || '');
         }
     }, [userData, isOpen]);
 
     const handleImageChange = (e) => {
         const file = e.target.files[0];
         if (file) {
+            setFormData(prev => ({ ...prev, profile_pic: file }));
             const reader = new FileReader();
             reader.onloadend = () => {
-                setFormData(prev => ({ ...prev, image: reader.result }));
+                setPreviewImage(reader.result);
             };
             reader.readAsDataURL(file);
         }
@@ -40,19 +54,54 @@ const UpdateProfileModal = ({ isOpen, onClose, onSave, userData }) => {
 
     if (!isOpen) return null;
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        onSave(formData);
-        toast.success("Profile updated perfectly!", {
-            style: {
-                borderRadius: '16px',
-                background: '#0f172a',
-                color: '#fff',
-                fontWeight: 'bold',
-                fontSize: '12px'
-            },
-        });
-        onClose();
+        setLoading(true);
+        try {
+            // 1. Handle Password Change if active
+            if (isChangingPassword) {
+                if (passwordData.new_password !== passwordData.confirm_password) {
+                    toast.error("New passwords do not match!");
+                    setLoading(false);
+                    return;
+                }
+                if (passwordData.new_password.length < 8) {
+                    toast.error("Password must be at least 8 characters long");
+                    setLoading(false);
+                    return;
+                }
+
+                await dispatch(changePassword({
+                    old_password: passwordData.old_password,
+                    new_password: passwordData.new_password
+                })).unwrap();
+                toast.success("Password changed successfully!");
+            }
+
+            // 2. Handle Profile Update
+            const submitData = { ...formData };
+
+            // If profile_pic is a string (URL), don't send it to backend 
+            // as it will fail validation or try to re-upload the same URL
+            if (typeof submitData.profile_pic === 'string') {
+                delete submitData.profile_pic;
+            }
+
+            // Remove email as it's read-only
+            delete submitData.email;
+
+            await onSave(submitData);
+            onClose();
+
+            // Reset password data
+            setPasswordData({ old_password: '', new_password: '', confirm_password: '' });
+            setIsChangingPassword(false);
+        } catch (error) {
+            console.error("Update error:", error);
+            toast.error(error || "Update failed. Please check your data.");
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -64,7 +113,7 @@ const UpdateProfileModal = ({ isOpen, onClose, onSave, userData }) => {
             />
 
             {/* Modal Container */}
-            <div className="relative w-full max-w-lg bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl rounded-[2.5rem] shadow-2xl border border-white/50 dark:border-slate-800 animate-in zoom-in-95 slide-in-from-bottom-8 duration-500 overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="relative w-full max-w-lg bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl rounded-xl shadow-2xl border border-white/50 dark:border-slate-800 animate-in zoom-in-95 slide-in-from-bottom-8 duration-500 overflow-hidden flex flex-col max-h-[90vh]">
 
                 {/* Header */}
                 <div className="relative px-8 pt-10 pb-6 shrink-0 bg-gradient-to-b from-slate-50/50 dark:from-slate-800/50 to-transparent">
@@ -76,7 +125,7 @@ const UpdateProfileModal = ({ isOpen, onClose, onSave, userData }) => {
                     </button>
 
                     <div className="flex items-center gap-4 mb-2">
-                        <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
+                        <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
                             <User size={24} />
                         </div>
                         <div>
@@ -90,7 +139,7 @@ const UpdateProfileModal = ({ isOpen, onClose, onSave, userData }) => {
                 <form onSubmit={handleSubmit} className="px-8 pb-10 overflow-y-auto custom-scrollbar space-y-6">
 
                     {/* Avatar Preview & Info */}
-                    <div className="bg-slate-50/50 dark:bg-slate-800/30 rounded-3xl p-6 border border-slate-100 dark:border-slate-800 flex items-center gap-6 group">
+                    <div className="bg-slate-50/50 dark:bg-slate-800/30 rounded-xl p-6 border border-slate-100 dark:border-slate-800 flex items-center gap-6 group">
                         <div className="relative">
                             <input
                                 type="file"
@@ -99,11 +148,11 @@ const UpdateProfileModal = ({ isOpen, onClose, onSave, userData }) => {
                                 accept="image/*"
                                 onChange={handleImageChange}
                             />
-                            <div className="w-20 h-20 bg-primary text-white rounded-2xl flex items-center justify-center text-3xl font-black shadow-xl shadow-primary/20 overflow-hidden">
-                                {formData.image ? (
-                                    <img src={formData.image} alt="Profile" className="w-full h-full object-cover" />
+                            <div className="w-20 h-20 bg-primary text-white rounded-xl flex items-center justify-center text-3xl font-black shadow-xl shadow-primary/20 overflow-hidden">
+                                {previewImage ? (
+                                    <img src={previewImage} alt="Profile" className="w-full h-full object-cover" />
                                 ) : (
-                                    formData.name ? formData.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'
+                                    (formData.first_name || formData.last_name) ? `${formData.first_name || ''} ${formData.last_name || ''}`.trim().split(' ').map(n => n[0]).join('').toUpperCase() : 'U'
                                 )}
                             </div>
                             <button
@@ -122,68 +171,148 @@ const UpdateProfileModal = ({ isOpen, onClose, onSave, userData }) => {
 
                     {/* Form Fields */}
                     <div className="space-y-5">
-                        {/* Name */}
+                        {/* First Name */}
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 ml-1">Full Identity</label>
+                            <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 ml-1">First Name</label>
                             <div className="relative group">
                                 <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" size={18} />
                                 <input
                                     type="text"
                                     required
-                                    value={formData.name}
-                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                    className="w-full bg-slate-50 dark:bg-slate-800/50 border border-transparent focus:border-primary/30 rounded-2xl pl-12 pr-6 py-4 text-sm font-bold outline-none transition-all dark:text-white"
-                                    placeholder="Enter your full name"
+                                    value={formData.first_name}
+                                    onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                                    className="w-full bg-slate-50 dark:bg-slate-800/50 border border-transparent focus:border-primary/30 rounded-xl pl-12 pr-6 py-4 text-sm font-bold outline-none transition-all dark:text-white"
+                                    placeholder="Enter your first name"
                                 />
                             </div>
                         </div>
 
-                        {/* Email */}
+                        {/* Last Name */}
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 ml-1">Mail Subscription</label>
+                            <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 ml-1">Last Name</label>
                             <div className="relative group">
-                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" size={18} />
+                                <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" size={18} />
+                                <input
+                                    type="text"
+                                    required
+                                    value={formData.last_name}
+                                    onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                                    className="w-full bg-slate-50 dark:bg-slate-800/50 border border-transparent focus:border-primary/30 rounded-xl pl-12 pr-6 py-4 text-sm font-bold outline-none transition-all dark:text-white"
+                                    placeholder="Enter your last name"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Email - READ ONLY */}
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center ml-1">
+                                <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Mail Subscription</label>
+                                <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">Read Only</span>
+                            </div>
+                            <div className="relative group opacity-70">
+                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                                 <input
                                     type="email"
-                                    required
+                                    readOnly
                                     value={formData.email}
-                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                    className="w-full bg-slate-50 dark:bg-slate-800/50 border border-transparent focus:border-primary/30 rounded-2xl pl-12 pr-6 py-4 text-sm font-bold outline-none transition-all dark:text-white"
+                                    className="w-full bg-slate-100/50 dark:bg-slate-800/30 border border-transparent rounded-xl pl-12 pr-6 py-4 text-sm font-bold outline-none cursor-not-allowed dark:text-slate-400"
                                     placeholder="your@email.com"
                                 />
                             </div>
                         </div>
 
+                        {/* Password Section Toggle */}
+                        <div className="pt-2">
+                            <button
+                                type="button"
+                                onClick={() => setIsChangingPassword(!isChangingPassword)}
+                                className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-colors ${isChangingPassword ? 'text-primary' : 'text-slate-500 hover:text-primary'}`}
+                            >
+                                <Lock size={14} />
+                                {isChangingPassword ? 'Cancel Password Change' : 'Change Password?'}
+                            </button>
+                        </div>
+
+                        {/* Integrated Password Change Form */}
+                        {isChangingPassword && (
+                            <div className="space-y-4 p-5 bg-primary/5 rounded-2xl border border-primary/10 animate-in slide-in-from-top-4 duration-300">
+                                <div className="flex items-center gap-2 mb-2 ml-1">
+                                    <KeyRound size={14} className="text-primary" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-primary">Security Update</span>
+                                </div>
+
+                                {/* Old Password */}
+                                <div className="space-y-1.5">
+                                    <div className="relative group">
+                                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" size={16} />
+                                        <input
+                                            type={showPasswords ? "text" : "password"}
+                                            value={passwordData.old_password}
+                                            onChange={(e) => setPasswordData({ ...passwordData, old_password: e.target.value })}
+                                            required={isChangingPassword}
+                                            className="w-full bg-white dark:bg-slate-900 border border-transparent focus:border-primary/30 rounded-xl pl-12 pr-12 py-3.5 text-xs font-bold outline-none transition-all dark:text-white"
+                                            placeholder="Current Password"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* New Password */}
+                                <div className="space-y-1.5">
+                                    <div className="relative group">
+                                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" size={16} />
+                                        <input
+                                            type={showPasswords ? "text" : "password"}
+                                            value={passwordData.new_password}
+                                            onChange={(e) => setPasswordData({ ...passwordData, new_password: e.target.value })}
+                                            required={isChangingPassword}
+                                            className="w-full bg-white dark:bg-slate-900 border border-transparent focus:border-primary/30 rounded-xl pl-12 pr-12 py-3.5 text-xs font-bold outline-none transition-all dark:text-white"
+                                            placeholder="New Password"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPasswords(!showPasswords)}
+                                            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-primary transition-colors cursor-pointer"
+                                        >
+                                            {showPasswords ? <EyeOff size={16} /> : <Eye size={16} />}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Confirm Password */}
+                                <div className="space-y-1.5">
+                                    <div className="relative group">
+                                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" size={16} />
+                                        <input
+                                            type={showPasswords ? "text" : "password"}
+                                            value={passwordData.confirm_password}
+                                            onChange={(e) => setPasswordData({ ...passwordData, confirm_password: e.target.value })}
+                                            required={isChangingPassword}
+                                            className="w-full bg-white dark:bg-slate-900 border border-transparent focus:border-primary/30 rounded-xl pl-12 pr-12 py-3.5 text-xs font-bold outline-none transition-all dark:text-white"
+                                            placeholder="Confirm New Password"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                            {/* Phone */}
+                            {/* Mobile Number */}
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 ml-1">Connect Number</label>
+                                <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 ml-1">Mobile Number</label>
                                 <div className="relative group">
                                     <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" size={16} />
                                     <input
                                         type="tel"
-                                        value={formData.phone}
-                                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                        className="w-full bg-slate-50 dark:bg-slate-800/50 border border-transparent focus:border-primary/30 rounded-2xl pl-12 pr-6 py-4 text-xs font-bold outline-none transition-all dark:text-white"
+                                        value={formData.mobile_no}
+                                        onChange={(e) => setFormData({ ...formData, mobile_no: e.target.value })}
+                                        className="w-full bg-slate-50 dark:bg-slate-800/50 border border-transparent focus:border-primary/30 rounded-xl pl-12 pr-6 py-4 text-xs font-bold outline-none transition-all dark:text-white"
                                         placeholder="+91 XXXXX XXXXX"
                                     />
                                 </div>
                             </div>
 
-                            {/* Location */}
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 ml-1">Home Base</label>
-                                <div className="relative group">
-                                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" size={16} />
-                                    <input
-                                        type="text"
-                                        value={formData.location}
-                                        onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                                        className="w-full bg-slate-50 dark:bg-slate-800/50 border border-transparent focus:border-primary/30 rounded-2xl pl-12 pr-6 py-4 text-xs font-bold outline-none transition-all dark:text-white"
-                                        placeholder="City, State"
-                                    />
-                                </div>
-                            </div>
+                            {/* Space filler to keep grid alignment if needed, or remove location if not backend supported */}
+                            {/* Removing Location as it is not in backend User serializer */}
                         </div>
                     </div>
 
@@ -192,16 +321,17 @@ const UpdateProfileModal = ({ isOpen, onClose, onSave, userData }) => {
                         <button
                             type="button"
                             onClick={onClose}
-                            className="flex-1 px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-all active:scale-95"
+                            className="flex-1 px-8 py-4 rounded-xl font-black text-[10px] uppercase tracking-widest text-black hover:text-slate-600 dark:hover:text-white  bg-white dark:hover:bg-slate-800 transition-all active:scale-95"
                         >
                             Nevermind
                         </button>
                         <button
                             type="submit"
-                            className="flex-[2] bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 px-8 py-4 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-2xl shadow-slate-900/10 dark:shadow-none hover:bg-primary dark:hover:bg-primary hover:text-white transition-all flex items-center justify-center gap-3 group active:scale-95 cursor-pointer"
+                            disabled={loading}
+                            className={`flex-[2] bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 px-8 py-4 rounded-xl font-black text-11px] uppercase tracking-[0.2em] shadow-2xl shadow-slate-900/10 dark:shadow-none transition-all flex items-center justify-center gap-3 group active:scale-95 cursor-pointer ${loading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-primary dark:hover:bg-primary hover:text-white'}`}
                         >
-                            Save
-                            <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                            {loading ? 'Saving...' : 'Save'}
+                            {!loading && <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />}
                         </button>
                     </div>
                 </form>

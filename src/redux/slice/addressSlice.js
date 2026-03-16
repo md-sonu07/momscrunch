@@ -1,5 +1,19 @@
-import { createSlice } from '@reduxjs/toolkit';
-import { fetchAddresses, addAddress, editAddress, removeAddress, makeDefaultAddress } from '../thunk/addressThunk';
+import { createSelector, createSlice } from '@reduxjs/toolkit';
+import {
+    fetchAddresses,
+    addAddress,
+    editAddress,
+    removeAddress,
+    makeDefaultAddress,
+} from '../thunk/addressThunk';
+import { logout } from '../thunk/authThunk';
+
+const applyAddressList = (state, addresses) => {
+    state.loading = false;
+    state.error = null;
+    state.hasLoaded = true;
+    state.addresses = Array.isArray(addresses) ? addresses : [];
+};
 
 const addressSlice = createSlice({
     name: 'address',
@@ -7,6 +21,7 @@ const addressSlice = createSlice({
         addresses: [],
         loading: false,
         error: null,
+        hasLoaded: false,
     },
     reducers: {
         clearAddressError: (state) => {
@@ -15,59 +30,97 @@ const addressSlice = createSlice({
     },
     extraReducers: (builder) => {
         builder
-            // Fetch Addresses
             .addCase(fetchAddresses.pending, (state) => {
                 state.loading = true;
+                state.error = null;
             })
             .addCase(fetchAddresses.fulfilled, (state, action) => {
-                state.loading = false;
-                const data = action.payload.results || action.payload.data || action.payload;
-                state.addresses = Array.isArray(data) ? data : [];
+                applyAddressList(state, action.payload);
             })
             .addCase(fetchAddresses.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.payload;
             })
-            // Add Address
             .addCase(addAddress.pending, (state) => {
                 state.loading = true;
+                state.error = null;
             })
             .addCase(addAddress.fulfilled, (state, action) => {
-                state.loading = false;
-                state.addresses.push(action.payload.data);
-                // If it was made default, other addresses are updated
-                if (action.payload.data.isDefault) {
-                    state.addresses.forEach(addr => {
-                        if (addr._id !== action.payload.data._id) addr.isDefault = false;
-                    });
-                }
+                applyAddressList(state, action.payload);
             })
             .addCase(addAddress.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.payload;
             })
-            // Update Address
+            .addCase(editAddress.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
             .addCase(editAddress.fulfilled, (state, action) => {
-                const index = state.addresses.findIndex(addr => addr._id === action.payload.data._id);
-                if (index !== -1) state.addresses[index] = action.payload.data;
-                if (action.payload.data.isDefault) {
-                    state.addresses.forEach(addr => {
-                        if (addr._id !== action.payload.data._id) addr.isDefault = false;
-                    });
-                }
+                applyAddressList(state, action.payload);
             })
-            // Remove Address
+            .addCase(editAddress.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload;
+            })
+            .addCase(removeAddress.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
             .addCase(removeAddress.fulfilled, (state, action) => {
-                state.addresses = state.addresses.filter(addr => addr._id !== action.payload);
+                applyAddressList(state, action.payload);
             })
-            // Set Default
+            .addCase(removeAddress.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload;
+            })
+            .addCase(makeDefaultAddress.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
             .addCase(makeDefaultAddress.fulfilled, (state, action) => {
-                state.addresses.forEach(addr => {
-                    addr.isDefault = (addr._id === action.payload.data._id);
-                });
+                applyAddressList(state, action.payload);
+            })
+            .addCase(makeDefaultAddress.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload;
+            })
+            .addCase(logout.fulfilled, (state) => {
+                state.addresses = [];
+                state.loading = false;
+                state.error = null;
+                state.hasLoaded = false;
             });
     },
 });
 
 export const { clearAddressError } = addressSlice.actions;
+
+const selectAddressState = (state) => state.address;
+
+export const selectAddresses = createSelector(
+    [selectAddressState],
+    (addressState) => addressState.addresses
+);
+
+export const selectAddressLoading = createSelector(
+    [selectAddressState],
+    (addressState) => addressState.loading
+);
+
+export const selectAddressError = createSelector(
+    [selectAddressState],
+    (addressState) => addressState.error
+);
+
+export const selectAddressHasLoaded = createSelector(
+    [selectAddressState],
+    (addressState) => addressState.hasLoaded
+);
+
+export const selectDefaultAddress = createSelector(
+    [selectAddresses],
+    (addresses) => addresses.find((address) => address.is_default) ?? addresses[0] ?? null
+);
+
 export default addressSlice.reducer;

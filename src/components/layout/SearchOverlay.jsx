@@ -66,7 +66,7 @@ const SearchOverlay = () => {
             />
 
             {/* Popup Container - Centered Mobile Box */}
-            <div className="relative w-full max-h-[80vh] bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.6)] overflow-hidden flex flex-col animate-in zoom-in-95 slide-in-from-bottom-10 duration-500 border border-white/20 dark:border-white/5">
+            <div className="relative w-full -top-20 sm:-top-0 max-h-[80vh] bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.6)] overflow-hidden flex flex-col animate-in zoom-in-95 slide-in-from-bottom-10 duration-500 border border-white/20 dark:border-white/5">
                 {/* Search Header */}
                 <div className="sticky top-0 z-10 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-100 dark:border-white/5 shrink-0">
                     <div className="px-5 h-16 flex items-center gap-3">
