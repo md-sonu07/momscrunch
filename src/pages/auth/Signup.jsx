@@ -82,7 +82,6 @@ const Signup = () => {
             const signupAction = await dispatch(signup({
                 session_id: sessionId,
                 otp: otp,
-                username: formData.email,
                 first_name: formData.fullName,
                 password: formData.password
             }));

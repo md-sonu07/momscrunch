@@ -16,6 +16,7 @@ import cartPopupReducer from './slice/cartPopupSlice';
 import ourStoryReducer from './slice/ourStorySlice';
 import storeProfileReducer from './slice/storeProfileSlice';
 import contactReducer from './slice/contactSlice';
+import reviewReducer from './slice/reviewSlice';
 
 export const store = configureStore({
     reducer: {
@@ -35,5 +36,6 @@ export const store = configureStore({
         ourStory: ourStoryReducer,
         storeProfile: storeProfileReducer,
         contact: contactReducer,
+        review: reviewReducer,
     },
 });

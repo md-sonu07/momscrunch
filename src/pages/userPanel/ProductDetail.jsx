@@ -20,9 +20,11 @@ import {
     RefreshCcw,
     Heart,
     ChevronRight,
+    ShoppingBag,
     Home as HomeIcon
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import ProductReviews from '../../components/userComponents/product/ProductReviews';
 
 const ProductDetail = () => {
     const { id } = useParams();
@@ -155,69 +157,72 @@ const ProductDetail = () => {
         }
     };
 
-    if (loading && !product) {
+    if (loading || (!product && !error)) {
         return (
             <div className="bg-background-light dark:bg-background-dark min-h-screen pb-20">
                 {/* Breadcrumbs Skeleton */}
                 <div className="max-w-7xl mx-auto px-4 md:px-6 py-6">
-                    <div className="flex items-center gap-2">
+                    <nav className="flex items-center gap-2 text-[10px] md:text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 overflow-x-auto whitespace-nowrap pb-2 md:pb-0">
+                        <div className="flex items-center gap-1">
+                            <HomeIcon size={14} className="text-slate-300 dark:text-slate-700" />
+                            <Skeleton variant="text" width="40px" />
+                        </div>
+                        <ChevronRight size={12} className="text-slate-300 dark:text-slate-700" />
                         <Skeleton variant="text" width="40px" />
-                        <span className="text-slate-300">/</span>
-                        <Skeleton variant="text" width="60px" />
-                        <span className="text-slate-300">/</span>
-                        <Skeleton variant="text" width="100px" />
-                    </div>
+                        <ChevronRight size={12} className="text-slate-300 dark:text-slate-700" />
+                        <Skeleton variant="text" width="120px" />
+                    </nav>
                 </div>
 
                 <div className="max-w-7xl mx-auto px-4 md:px-6">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 xl:gap-16">
                         {/* Left: Images Skeleton */}
                         <div className="space-y-6">
-                            <Skeleton variant="rectangular" height="470px" className="rounded-3xl" />
-                            <div className="flex gap-4">
-                                <Skeleton variant="rectangular" width="96px" height="96px" className="rounded-2xl shrink-0" />
-                                <Skeleton variant="rectangular" width="96px" height="96px" className="rounded-2xl shrink-0" />
-                                <Skeleton variant="rectangular" width="96px" height="96px" className="rounded-2xl shrink-0" />
+                            <Skeleton variant="rectangular" className="h-[300px] md:h-[400px] lg:h-[470px] w-full rounded-3xl" />
+                            <div className="flex gap-4 overflow-x-auto pb-2">
+                                <Skeleton variant="rectangular" className="w-24 h-24 rounded-2xl shrink-0" />
+                                <Skeleton variant="rectangular" className="w-24 h-24 rounded-2xl shrink-0" />
+                                <Skeleton variant="rectangular" className="w-24 h-24 rounded-2xl shrink-0" />
                             </div>
                         </div>
 
                         {/* Right: Content Skeleton */}
                         <div className="space-y-8">
                             <div>
-                                <Skeleton variant="text" width="120px" className="mb-4" />
-                                <Skeleton variant="title" width="80%" height="48px" className="mb-4" />
+                                <Skeleton variant="text" className="w-32 mb-4" />
+                                <Skeleton variant="title" className="w-4/5 h-10 md:h-12 mb-4" />
                                 <div className="flex gap-4">
-                                    <Skeleton variant="rectangular" width="100px" height="32px" className="rounded-xl" />
-                                    <Skeleton variant="text" width="150px" />
+                                    <Skeleton variant="rectangular" className="w-24 h-8 rounded-xl" />
+                                    <Skeleton variant="text" className="w-40" />
                                 </div>
                             </div>
 
                             <div className="space-y-3">
-                                <Skeleton variant="title" width="40%" />
-                                <Skeleton variant="text" width="100%" />
-                                <Skeleton variant="text" width="100%" />
-                                <Skeleton variant="text" width="60%" />
+                                <Skeleton variant="title" className="w-2/5" />
+                                <Skeleton variant="text" className="w-full" />
+                                <Skeleton variant="text" className="w-full" />
+                                <Skeleton variant="text" className="w-3/5" />
                             </div>
 
-                            <div className="p-6 bg-slate-50 dark:bg-slate-900/40 rounded-[2rem] border border-slate-100 dark:border-white/5 space-y-6">
+                            <div className="p-6 bg-slate-50 dark:bg-slate-900/40 rounded-4xl border border-slate-100 dark:border-white/5 space-y-6">
                                 <div className="space-y-2">
-                                    <Skeleton variant="title" width="100px" height="36px" />
-                                    <Skeleton variant="text" width="150px" />
+                                    <Skeleton variant="title" className="w-24 h-9" />
+                                    <Skeleton variant="text" className="w-40" />
                                 </div>
                                 <div className="space-y-3">
-                                    <Skeleton variant="text" width="100px" />
+                                    <Skeleton variant="text" className="w-24" />
                                     <div className="flex gap-2">
-                                        <Skeleton variant="circular" width="48px" height="48px" />
-                                        <Skeleton variant="circular" width="48px" height="48px" />
-                                        <Skeleton variant="circular" width="48px" height="48px" />
+                                        <Skeleton variant="circular" className="w-12 h-12" />
+                                        <Skeleton variant="circular" className="w-12 h-12" />
+                                        <Skeleton variant="circular" className="w-12 h-12" />
                                     </div>
                                 </div>
                                 <div className="flex gap-4">
-                                    <Skeleton variant="rectangular" width="130px" height="48px" className="rounded-xl" />
-                                    <Skeleton variant="rectangular" width="100%" height="48px" className="rounded-xl" />
+                                    <Skeleton variant="rectangular" className="w-32 h-12 rounded-xl" />
+                                    <Skeleton variant="rectangular" className="w-full h-12 rounded-xl" />
                                 </div>
                             </div>
-                            <Skeleton variant="rectangular" width="100%" height="56px" className="rounded-xl" />
+                            <Skeleton variant="rectangular" className="w-full h-14 rounded-xl" />
                         </div>
                     </div>
                 </div>
@@ -227,14 +232,26 @@ const ProductDetail = () => {
 
     if (error || !product) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center">
-                <h2 className="text-2xl font-bold mb-4">Product Not Found</h2>
-                <button
-                    onClick={() => navigate('/shop')}
-                    className="bg-primary text-white px-6 py-2 rounded-full font-bold"
-                >
-                    Back to Shop
-                </button>
+            <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center bg-background-light dark:bg-background-dark font-sans">
+                <div className="bg-white dark:bg-slate-900 p-10 rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-white/5 max-w-lg w-full">
+                    <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                        <ShoppingBag className="text-primary" size={40} />
+                    </div>
+                    <h2 className="text-3xl font-black mb-4 text-slate-900 dark:text-white uppercase tracking-tight">Product Not Found</h2>
+                    <p className="text-slate-500 dark:text-slate-400 mb-8 font-bold text-sm">The premium crunch you're looking for might have been eaten or moved to another shelf!</p>
+                    <button
+                        onClick={() => navigate('/shop')}
+                        className="cursor-pointer w-full bg-primary text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:translate-y-[-2px] transition-all active:scale-95"
+                    >
+                        Explore Other Snacks
+                    </button>
+                    <button
+                        onClick={() => navigate('/')}
+                        className="cursor-pointer w-full mt-4 text-slate-400 hover:text-primary font-black uppercase tracking-widest text-[10px] transition-all"
+                    >
+                        Back to Home
+                    </button>
+                </div>
             </div>
         );
     }
@@ -309,8 +326,9 @@ const ProductDetail = () => {
             {/* Breadcrumbs */}
             <div className="max-w-7xl mx-auto px-4 md:px-6 py-6">
                 <nav className="flex items-center gap-2 text-[10px] md:text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 overflow-x-auto whitespace-nowrap pb-2 md:pb-0">
+                    <HomeIcon size={14} />
                     <button onClick={() => navigate('/')} className="cursor-pointer hover:text-primary transition-colors flex items-center gap-1">
-                        <HomeIcon size={14} /> Home
+                        Home
                     </button>
                     <ChevronRight size={12} />
                     <button onClick={() => navigate('/shop')} className="cursor-pointer hover:text-primary transition-colors">
@@ -334,7 +352,7 @@ const ProductDetail = () => {
                                 alt={product.name}
                                 className="w-full h-full object-cover transition-all duration-700 ease-out hover:scale-105"
                             />
-                            
+
                             <button
                                 onClick={handleWishlist}
                                 disabled={isWishlistUpdating}
@@ -575,6 +593,11 @@ const ProductDetail = () => {
                     </div>
                 </div>
             )}
+
+
+
+            {/* Review System */}
+            <ProductReviews productName={product.name} productId={product.id} />
         </div>
     );
 };

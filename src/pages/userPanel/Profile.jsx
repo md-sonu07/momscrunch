@@ -127,7 +127,7 @@ const Profile = () => {
                         {/* Avatar Section - Interactive */}
                         <div className="relative group shrink-0">
                             {profileLoading ? (
-                                <Skeleton variant="rectangular" width="160px" height="160px" className="rounded-3xl" />
+                                <Skeleton variant="rectangular" className="w-24 h-24 sm:w-40 sm:h-40 rounded-3xl shrink-0" />
                             ) : (
                                 <div className="w-24 h-24 sm:w-40 sm:h-40 bg-primary text-white rounded-3xl flex items-center justify-center text-4xl sm:text-6xl font-black shadow-2xl shadow-primary/30 transition-transform group-hover:scale-[1.02] duration-500 overflow-hidden">
                                     {displayUser.profile_pic ? (
@@ -144,10 +144,12 @@ const Profile = () => {
                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                                 {profileLoading ? (
                                     <div className="space-y-4 w-full">
-                                        <Skeleton variant="title" width="60%" />
-                                        <div className="space-y-2">
-                                            <Skeleton variant="text" width="40%" />
-                                            <Skeleton variant="text" width="30%" />
+                                        <div className="flex justify-center md:justify-start">
+                                            <Skeleton variant="title" className="w-3/5" />
+                                        </div>
+                                        <div className="space-y-2 flex flex-col items-center md:items-start">
+                                            <Skeleton variant="text" className="w-2/5" />
+                                            <Skeleton variant="text" className="w-1/4" />
                                         </div>
                                     </div>
                                 ) : (
@@ -181,55 +183,32 @@ const Profile = () => {
                                         </Link>
                                     ))}
                                 </div>
-                                {/* ... (actions remain same) */}
-
-                                {/* Profile Actions Area */}
-                                <div className="flex flex-col gap-3 w-full md:w-auto">
-                                    <div className="flex flex-col sm:flex-row gap-3 items-center">
-                                        <Link
-                                            to="/profile/settings"
-                                            className="group flex items-center justify-center bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 w-[52px] h-[52px] rounded-xl shadow-xl shadow-slate-900/10 hover:bg-primary dark:hover:bg-primary hover:text-white dark:hover:text-white transition-all active:scale-95 shrink-0"
-                                        >
-                                            <SettingsIcon size={20} className="group-hover:rotate-90 transition-transform duration-500" />
-                                        </Link>
-
-                                        {displayUser?.roles?.includes('admin') ? (
-                                            <a
-                                                href="/admin/"
-                                                className="group flex w-full items-center justify-center gap-3 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 px-6 h-[52px] rounded-xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-slate-900/10 hover:bg-primary dark:hover:bg-primary hover:text-white transition-all active:scale-95 whitespace-nowrap"
-                                            >
-                                                <LayoutDashboard size={18} className="text-primary group-hover:text-white transition-colors" />
-                                                Admin Panel
-                                                <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
-                                            </a>
-                                        ) : (
-                                            <button
-                                                onClick={handleLogout}
-                                                className="flex items-center justify-between gap-4 px-6 h-[52px] text-red-500 rounded-xl font-bold text-sm hover:bg-red-100 cursor-pointer bg-white dark:bg-slate-900/50 dark:hover:bg-red-500/10 transition-all w-full border border-red-100 dark:border-red-500/10 dark:hover:border-red-500/20 group active:scale-95 text-start"
-                                            >
-                                                <span className="flex items-center gap-3">
-                                                    <LogOut size={18} />
-                                                    Logout
-                                                </span>
-                                                <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
-                                            </button>
-                                        )}
-                                    </div>
-
-                                    {displayUser?.roles?.includes('admin') && (
-                                        <button
-                                            onClick={handleLogout}
-                                            className="flex items-center justify-between gap-4 px-8 py-3.5 text-red-500 rounded-xl font-bold text-sm hover:bg-red-100 cursor-pointer bg-red-50 dark:hover:bg-red-500/10 transition-all w-full md:w-auto md:min-w-[220px] border border-red-100 dark:border-red-500/10 dark:hover:border-red-500/20 group active:scale-95 text-start"
-                                        >
-                                            <span className="flex items-center gap-3">
-                                                <LogOut size={18} />
-                                                Logout
-                                            </span>
-                                            <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
-                                        </button>
-                                    )}
-                                </div>
+                                {displayUser?.roles?.includes('admin') && (
+                                    <a
+                                        href="/admin/"
+                                        className="group h-[52px] mt-2 w-full flex items-center justify-between gap-4 px-6 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-xl font-bold text-sm shadow-xl shadow-slate-900/10 hover:bg-primary dark:hover:bg-primary hover:text-white transition-all active:scale-95 whitespace-nowrap"
+                                    >
+                                        <span className="flex items-center gap-3">
+                                            <LayoutDashboard size={18} className="text-primary group-hover:text-white transition-colors" />
+                                            Admin Panel
+                                        </span>
+                                        <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                                    </a>
+                                ) }
+                                    <button
+                                        onClick={handleLogout}
+                                        className="group h-[52px] w-full flex items-center justify-between gap-4 px-6 text-red-500 rounded-xl font-bold text-sm hover:bg-red-100 cursor-pointer bg-white dark:bg-slate-900/50 dark:hover:bg-red-500/10 transition-all border border-red-100 dark:border-red-500/10 dark:hover:border-red-500/20 active:scale-95 text-start"
+                                    >
+                                        <span className="flex items-center gap-3">
+                                            <LogOut size={18} />
+                                            Logout
+                                        </span>
+                                        <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                                    </button>
+                                
                             </div>
+
+                            
                         </div>
                     </div>
                 </div>
@@ -294,8 +273,8 @@ const Profile = () => {
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 };
 
