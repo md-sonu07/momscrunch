@@ -7,6 +7,7 @@ export const calculateOrderSummary = ({
     gstPercentage = 0,
     deliveryCharge = 0,
     freeShippingThreshold = DEFAULT_FREE_SHIPPING_THRESHOLD,
+    couponDiscount = 0,
 }) => {
     const normalizedSubtotal = roundCurrency(subtotal);
     const normalizedThreshold = Number(freeShippingThreshold ?? DEFAULT_FREE_SHIPPING_THRESHOLD);
@@ -14,14 +15,17 @@ export const calculateOrderSummary = ({
     const shipping = freeShippingEligible || normalizedSubtotal === 0
         ? 0
         : roundCurrency(Number(deliveryCharge || 0));
-    const tax = roundCurrency((normalizedSubtotal * Number(gstPercentage || 0)) / 100);
-    const total = roundCurrency(normalizedSubtotal + shipping + tax);
+
+    const taxableTotal = Math.max(normalizedSubtotal - Number(couponDiscount || 0), 0);
+    const tax = roundCurrency((taxableTotal * Number(gstPercentage || 0)) / 100);
+    const total = roundCurrency(taxableTotal + shipping + tax);
 
     return {
         subtotal: normalizedSubtotal,
         shipping,
         tax,
         total,
+        couponDiscount: Number(couponDiscount || 0),
         freeShippingEligible,
         freeShippingThreshold: normalizedThreshold,
     };

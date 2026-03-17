@@ -75,10 +75,12 @@ const Cart = () => {
         }
     };
 
-    const subtotal = useMemo(
-        () => cartItems.reduce((acc, item) => acc + (parseFloat(item.product_price) * item.quantity), 0),
-        [cartItems]
-    );
+    const { subtotal, originalSubtotal, totalDiscount } = useMemo(() => {
+        const selling = cartItems.reduce((acc, item) => acc + (parseFloat(item.product_price) * item.quantity), 0);
+        const original = cartItems.reduce((acc, item) => acc + (parseFloat(item.product_original_price || item.product_price) * item.quantity), 0);
+        const discount = original - selling;
+        return { subtotal: selling, originalSubtotal: original, totalDiscount: discount };
+    }, [cartItems]);
     const summary = useMemo(
         () => calculateOrderSummary({
             subtotal,
@@ -250,7 +252,13 @@ const Cart = () => {
                                         <h3 className="text-base font-black text-slate-900 dark:text-white tracking-tight leading-tight mb-0.5">
                                             {item.product_name}
                                         </h3>
-                                        <div className="text-[11px] font-bold text-slate-400">₹{item.product_price} / unit</div>
+                                        <div className="flex items-center gap-2 mt-0.5">
+                                            <div className="text-[11px] font-black text-primary uppercase tracking-widest">₹{item.product_price}</div>
+                                            {parseFloat(item.product_original_price) > parseFloat(item.product_price) && (
+                                                <div className="text-[10px] font-bold text-slate-400 line-through opacity-60">₹{item.product_original_price}</div>
+                                            )}
+                                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">/ unit</div>
+                                        </div>
                                     </div>
 
                                     {/* Divider */}
@@ -309,9 +317,15 @@ const Cart = () => {
 
                             <div className="space-y-4 mb-8">
                                 <div className="flex justify-between items-center text-sm font-bold text-slate-500">
-                                    <span className="uppercase tracking-widest text-[10px]">Subtotal</span>
-                                    <span className="text-slate-900 dark:text-white tabular-nums">₹{formatCurrency(summary.subtotal)}</span>
+                                    <span className="uppercase tracking-widest text-[10px]">Subtotal (Original)</span>
+                                    <span className="text-slate-900 dark:text-white tabular-nums">₹{formatCurrency(originalSubtotal)}</span>
                                 </div>
+                                {totalDiscount > 0 && (
+                                    <div className="flex justify-between items-center text-sm font-bold text-emerald-500">
+                                        <span className="uppercase tracking-widest text-[10px]">Product Discount</span>
+                                        <span className="tabular-nums">-₹{formatCurrency(totalDiscount)}</span>
+                                    </div>
+                                )}
                                 <div className="flex justify-between items-center text-sm font-bold text-slate-500">
                                     <span className="uppercase tracking-widest text-[10px]">Shipping</span>
                                     {storeSettingsLoading ? (

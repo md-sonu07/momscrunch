@@ -48,3 +48,13 @@ export const clearCart = async () => {
     await Promise.all(cart.items.map((item) => deleteCartItem(item.id)));
     return getCart();
 };
+
+export const applyCoupon = async (code) => {
+    const response = await axiosApi.post('/api/user/cart/applycoupon/', { code });
+    return normalizeCartResponse(response.data.cart);
+};
+
+export const removeCoupon = async () => {
+    const response = await axiosApi.post('/api/user/cart/removecoupon/');
+    return normalizeCartResponse(response.data.cart);
+};

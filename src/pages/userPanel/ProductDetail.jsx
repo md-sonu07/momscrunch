@@ -258,10 +258,10 @@ const ProductDetail = () => {
 
     const price = selectedVariant
         ? (selectedVariant.discount_price ? selectedVariant.discount_price : selectedVariant.price)
-        : (product.price || product.starting_from);
+        : (product.discount_price || product.price || product.starting_from);
     const oldPrice = selectedVariant
         ? (selectedVariant.discount_price ? selectedVariant.price : null)
-        : product.oldPrice;
+        : (product.discount_price && product.starting_from ? product.starting_from : (product.oldPrice || null));
     const discount = oldPrice && price ? Math.round(((oldPrice - price) / oldPrice) * 100) : 0;
     const images = product.images?.length > 0
         ? product.images.map(img => img.productimages)

@@ -222,7 +222,11 @@ const ActiveOrders = () => {
                                     <div className="w-full overflow-x-auto no-scrollbar">
                                         <div className="flex items-center gap-4 py-4 min-w-max">
                                             {order.items?.map((item, idx) => (
-                                                <div key={idx} className="flex-none flex items-center gap-3 bg-white dark:bg-slate-900 p-2 pr-4 rounded-lg border border-slate-100 dark:border-slate-800 shadow-sm">
+                                                <Link
+                                                    key={idx}
+                                                    to={`/product/${item.product_slug}`}
+                                                    className="flex-none flex items-center gap-3 bg-white dark:bg-slate-900 p-2 pr-4 rounded-lg border border-slate-100 dark:border-slate-800 shadow-sm hover:border-primary/40 hover:shadow-md transition-all active:scale-95 group/item cursor-pointer"
+                                                >
                                                     <div className="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-lg flex items-center justify-center overflow-hidden border border-slate-100 dark:border-slate-700 relative group/thumb">
                                                         {item.product_image ? (
                                                             <img
@@ -235,14 +239,14 @@ const ActiveOrders = () => {
                                                         )}
                                                     </div>
                                                     <div className="min-w-0">
-                                                        <p className="text-[11px] font-bold text-slate-700 dark:text-slate-200 truncate max-w-[150px]">
+                                                        <p className="text-[11px] font-bold text-slate-700 dark:text-slate-200 truncate max-w-[150px] group-hover/item:text-primary transition-colors">
                                                             {item.product_variant_name || 'Item Name'}
                                                         </p>
                                                         <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest leading-none">
                                                             {item.weight} • {item.quantity} Unit{item.quantity > 1 ? 's' : ''}
                                                         </p>
                                                     </div>
-                                                </div>
+                                                </Link>
                                             ))}
                                         </div>
                                     </div>
