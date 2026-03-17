@@ -12,6 +12,7 @@ const normalizeNumber = (value, fallback) => {
 const initialState = {
     gstPercentage: 18,
     deliveryCharge: 0,
+    deliveryMode: 'local',
     freeShippingThreshold: 499,
     couponCode: '',
     loading: false,
@@ -26,6 +27,7 @@ const storeSettingsSlice = createSlice({
         setStoreSettings: (state, action) => {
             state.gstPercentage = normalizeNumber(action.payload.gst_percentage, 18);
             state.deliveryCharge = normalizeNumber(action.payload.delivery_charge, 0);
+            state.deliveryMode = action.payload.delivery_mode ?? 'local';
             state.freeShippingThreshold = normalizeNumber(action.payload.free_shipping_threshold, 499);
             state.couponCode = action.payload.coupon_code ?? '';
             state.loading = false;

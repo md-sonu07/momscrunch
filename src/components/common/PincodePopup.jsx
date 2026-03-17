@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MapPin, X, CheckCircle2, ArrowRight, Navigation2, Loader2 } from 'lucide-react';
+import { storeSettingsAPI } from '../../api/store.api';
 
 const PincodePopup = ({ isOpen, onClose, onSave, currentPincode }) => {
     const [pincode, setPincode] = useState(currentPincode || '');
     const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
     const [isValidating, setIsValidating] = useState(false);
     const [isLocating, setIsLocating] = useState(false);
     const popupRef = useRef(null);
@@ -66,18 +68,35 @@ const PincodePopup = ({ isOpen, onClose, onSave, currentPincode }) => {
 
     if (!isOpen) return null;
 
-    const handleValidate = () => {
+    const handleValidate = async () => {
         if (!/^\d{6}$/.test(pincode)) {
             setError('Invalid Pincode');
+            setSuccess('');
             return;
         }
 
         setIsValidating(true);
-        setTimeout(() => {
+        setError('');
+        setSuccess('');
+
+        try {
+            const data = await storeSettingsAPI.checkPincode(pincode);
+
+            if (data.allowed) {
+                setSuccess(data.message || 'Delivery Available!');
+                // Small delay so user can see the success message
+                setTimeout(() => {
+                    onSave(pincode);
+                    onClose();
+                }, 1000);
+            } else {
+                setError(data.message || 'Area Not Covered');
+            }
+        } catch (err) {
+            setError('Validation failed. Try again.');
+        } finally {
             setIsValidating(false);
-            onSave(pincode);
-            onClose();
-        }, 600);
+        }
     };
 
     return (
@@ -97,11 +116,23 @@ const PincodePopup = ({ isOpen, onClose, onSave, currentPincode }) => {
                         <X size={18} />
                     </button>
                 </div>
-
-                <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-4 font-medium leading-relaxed">
-                    Check product availability and delivery estimates in your area.
-                </p>
-
+                <div className="min-h-[40px] flex items-center pl-1 mb-4">
+                    {error ? (
+                        <p className="text-[12px] text-red-500 font-bold leading-relaxed animate-in fade-in slide-in-from-top-1 duration-200">
+                            <i className="fa-solid fa-circle-exclamation mr-1.5"></i>
+                            {error}
+                        </p>
+                    ) : success ? (
+                        <p className="text-[12px] text-emerald-500 font-bold leading-relaxed animate-in fade-in slide-in-from-top-1 duration-200">
+                            <i className="fa-solid fa-circle-check mr-1.5"></i>
+                            {success}
+                        </p>
+                    ) : (
+                        <p className="text-[12px] text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
+                            Check product availability and delivery estimates in your area.
+                        </p>
+                    )}
+                </div>
                 <div className="space-y-4">
                     <div className="relative group">
                         <input
@@ -111,16 +142,13 @@ const PincodePopup = ({ isOpen, onClose, onSave, currentPincode }) => {
                             onChange={(e) => {
                                 setPincode(e.target.value.replace(/\D/g, ''));
                                 setError('');
+                                setSuccess('');
                             }}
-                            className={`w-full bg-slate-50 dark:bg-slate-800/50 border-2 ${error ? 'border-red-500/20' : 'border-slate-100 dark:border-slate-800 focus:border-primary/20'} rounded-xl py-3 px-4 outline-none transition-all text-sm font-black tracking-[0.3em] text-slate-900 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-600`}
+                            className={`w-full bg-slate-50 dark:bg-slate-800/50 border-2 ${error ? 'border-red-500/20' : success ? 'border-emerald-500/20' : 'border-slate-100 dark:border-slate-800 focus:border-primary/20'} rounded-xl py-3 px-4 outline-none transition-all text-sm font-black tracking-[0.3em] text-slate-900 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-600`}
                             placeholder="000000"
                             autoFocus
                         />
-                        {error && (
-                            <p className="absolute -bottom-4.5 left-1 text-red-500 text-[8px] font-black uppercase tracking-widest leading-none">
-                                {error}
-                            </p>
-                        )}
+
                     </div>
 
                     <button

@@ -1,33 +1,51 @@
 import React, { useState, useEffect } from 'react';
 import { MapPin, X, CheckCircle2, ArrowRight } from 'lucide-react';
+import { storeSettingsAPI } from '../../api/store.api';
 
 const PincodeModal = ({ isOpen, onClose, onSave, currentPincode }) => {
     const [pincode, setPincode] = useState(currentPincode || '');
     const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
     const [isValidating, setIsValidating] = useState(false);
 
     useEffect(() => {
         if (isOpen) {
             setPincode(currentPincode || '');
             setError('');
+            setSuccess('');
         }
     }, [isOpen, currentPincode]);
 
     if (!isOpen) return null;
 
-    const handleValidate = () => {
+    const handleValidate = async () => {
         if (!/^\d{6}$/.test(pincode)) {
             setError('Please enter a valid 6-digit pincode');
+            setSuccess('');
             return;
         }
 
         setIsValidating(true);
-        // Simulate API call to check availability
-        setTimeout(() => {
+        setError('');
+        setSuccess('');
+
+        try {
+            const data = await storeSettingsAPI.checkPincode(pincode);
+
+            if (data.allowed) {
+                setSuccess(data.message || 'Delivery Available!');
+                setTimeout(() => {
+                    onSave(pincode);
+                    onClose();
+                }, 1200);
+            } else {
+                setError(data.message || 'Area Not Covered');
+            }
+        } catch (err) {
+            setError('Validation failed. Try again.');
+        } finally {
             setIsValidating(false);
-            onSave(pincode);
-            onClose();
-        }, 800);
+        }
     };
 
     return (
@@ -54,9 +72,23 @@ const PincodeModal = ({ isOpen, onClose, onSave, currentPincode }) => {
                 </div>
 
                 <div className="p-8">
-                    <p className="text-slate-500 dark:text-slate-400 text-sm mb-6 font-medium text-center">
-                        Enter your delivery pincode to see product availability and delivery estimates.
-                    </p>
+                    <div className="min-h-[50px] mb-6 flex flex-col items-center justify-center">
+                        {error ? (
+                            <p className="text-red-500 text-sm font-bold text-center animate-in fade-in slide-in-from-top-2 duration-300">
+                                <i className="fa-solid fa-circle-exclamation mr-2"></i>
+                                {error}
+                            </p>
+                        ) : success ? (
+                            <p className="text-emerald-500 text-sm font-bold text-center animate-in fade-in slide-in-from-top-2 duration-300">
+                                <i className="fa-solid fa-circle-check mr-2"></i>
+                                {success}
+                            </p>
+                        ) : (
+                            <p className="text-slate-500 dark:text-slate-400 text-sm font-medium text-center">
+                                Enter your delivery pincode to see product availability and delivery estimates.
+                            </p>
+                        )}
+                    </div>
 
                     <div className="relative mb-6 group">
                         <div className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors duration-300 ${error ? 'text-red-500' : 'text-slate-400 group-focus-within:text-primary'}`}>
@@ -69,23 +101,19 @@ const PincodeModal = ({ isOpen, onClose, onSave, currentPincode }) => {
                             onChange={(e) => {
                                 setPincode(e.target.value.replace(/\D/g, ''));
                                 setError('');
+                                setSuccess('');
                             }}
-                            className={`w-full bg-slate-50 dark:bg-slate-800/50 border-2 ${error ? 'border-red-500/50' : 'border-slate-100 dark:border-slate-800 group-focus-within:border-primary/30'} rounded-2xl py-4 pl-12 pr-4 outline-none transition-all duration-300 text-lg font-black tracking-[0.2em] text-slate-900 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-600`}
+                            className={`w-full bg-slate-50 dark:bg-slate-800/50 border-2 ${error ? 'border-red-500/50' : success ? 'border-emerald-500/50' : 'border-slate-100 dark:border-slate-800 group-focus-within:border-primary/30'} rounded-2xl py-4 pl-12 pr-4 outline-none transition-all duration-300 text-lg font-black tracking-[0.2em] text-slate-900 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-600`}
                             placeholder="Enter Pincode"
                             autoFocus
                         />
-                        {error && (
-                            <p className="mt-2 text-red-500 text-[10px] font-black uppercase tracking-wider ml-1">
-                                {error}
-                            </p>
-                        )}
                     </div>
 
                     <div className="flex flex-col gap-3">
                         <button
                             onClick={handleValidate}
-                            disabled={isValidating}
-                            className="w-full bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-widest py-4 rounded-2xl shadow-lg shadow-primary/20 hover:shadow-primary/30 active:scale-95 transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed group"
+                            disabled={isValidating || success}
+                            className={`w-full ${success ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20' : 'bg-primary hover:bg-primary/90 shadow-primary/20'} text-white font-black uppercase tracking-widest py-4 rounded-2xl shadow-lg hover:shadow-primary/30 active:scale-95 transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed group`}
                         >
                             {isValidating ? (
                                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />

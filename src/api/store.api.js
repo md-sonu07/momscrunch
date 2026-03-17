@@ -12,6 +12,11 @@ export const storeSettingsAPI = {
         const response = await axiosApi.get('/api/shop/profile/');
         return response.data;
     },
+    // Check if pincode is allowed
+    checkPincode: async (pincode) => {
+        const response = await axiosApi.get(`/api/shop/check-pincode/?pincode=${pincode}`);
+        return response.data;
+    },
 };
 
 export default storeSettingsAPI;
