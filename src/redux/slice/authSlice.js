@@ -1,5 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit';
-import { login, signup, logout } from '../thunk/authThunk';
+import { login, signup, logout, verifyOtp } from '../thunk/authThunk';
 import { updateProfile } from '../thunk/userThunk';
 
 const initialState = {
@@ -84,6 +84,13 @@ const authSlice = createSlice({
                 const updatedUser = action.payload.user || action.payload.data || action.payload;
                 state.user = updatedUser;
                 localStorage.setItem('user', JSON.stringify(updatedUser));
+            })
+            // OTP Verification Success
+            .addCase(verifyOtp.fulfilled, (state) => {
+                if (state.user) {
+                    state.user.is_email_verified = true;
+                    localStorage.setItem('user', JSON.stringify(state.user));
+                }
             });
     },
 });

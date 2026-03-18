@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import Home from '../pages/userPanel/Home';
 import Login from '../pages/auth/Login';
 import Signup from '../pages/auth/Signup';
+import ForgotPassword from '../pages/auth/ForgotPassword';
 import Shop from '../pages/userPanel/Shop';
 import OurStory from '../pages/userPanel/OurStory';
 import Contact from '../pages/userPanel/Contact';
@@ -29,6 +30,7 @@ const AppRoutes = () => {
             <Route path="/product/:slug" element={<ProductDetail />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/our-story" element={<OurStory />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/terms-and-conditions" element={<TermsAndConditions />} />

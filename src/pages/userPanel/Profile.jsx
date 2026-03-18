@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, MapPin, Package, LogOut, ChevronRight, Heart, Settings as SettingsIcon, Camera, Phone, LayoutDashboard } from 'lucide-react';
+import { Mail, MapPin, Package, LogOut, ChevronRight, Heart, Settings as SettingsIcon, Camera, Phone, LayoutDashboard, ShieldCheck } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import UpdateProfileModal from '../../components/common/UpdateProfileModal';
@@ -158,6 +158,16 @@ const Profile = () => {
                                         <div className="flex sm:flex-col items-center justify-center md:items-start gap-3 sm:gap-4 text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.15em] sm:tracking-widest mt-2">
                                             <span className="flex items-center gap-1.5 lowercase"><Mail size={14} className="shrink-0" /> {displayUser.email || 'Email not set'}</span>
                                             <span className="flex items-center gap-1.5"><Phone size={14} className="shrink-0" /> {displayUser.mobile_no || 'Phone not set'}</span>
+                                            {!displayUser.is_email_verified && (
+                                                <Link
+                                                    to="/signup"
+                                                    state={{ fromProfile: true }}
+                                                    className="flex items-center gap-1.5 text-primary hover:text-primary-dark transition-colors font-black uppercase tracking-widest mt-2"
+                                                >
+                                                    <ShieldCheck size={14} className="shrink-0" />
+                                                    Verify Email
+                                                </Link>
+                                            )}
                                         </div>
                                     </div>
                                 )}
@@ -194,21 +204,21 @@ const Profile = () => {
                                         </span>
                                         <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
                                     </a>
-                                ) }
-                                    <button
-                                        onClick={handleLogout}
-                                        className="group h-[52px] w-full flex items-center justify-between gap-4 px-6 text-red-500 rounded-xl font-bold text-sm hover:bg-red-100 cursor-pointer bg-white dark:bg-slate-900/50 dark:hover:bg-red-500/10 transition-all border border-red-100 dark:border-red-500/10 dark:hover:border-red-500/20 active:scale-95 text-start"
-                                    >
-                                        <span className="flex items-center gap-3">
-                                            <LogOut size={18} />
-                                            Logout
-                                        </span>
-                                        <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
-                                    </button>
-                                
+                                )}
+                                <button
+                                    onClick={handleLogout}
+                                    className="group h-[52px] w-full flex items-center justify-between gap-4 px-6 text-red-500 rounded-xl font-bold text-sm hover:bg-red-100 cursor-pointer bg-white dark:bg-slate-900/50 dark:hover:bg-red-500/10 transition-all border border-red-100 dark:border-red-500/10 dark:hover:border-red-500/20 active:scale-95 text-start"
+                                >
+                                    <span className="flex items-center gap-3">
+                                        <LogOut size={18} />
+                                        Logout
+                                    </span>
+                                    <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                                </button>
+
                             </div>
 
-                            
+
                         </div>
                     </div>
                 </div>

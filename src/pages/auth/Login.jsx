@@ -92,7 +92,7 @@ const Login = () => {
                         <div className="space-y-2">
                             <div className="flex justify-between items-center ml-1">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Password</label>
-                                <a href="#" className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline">Forgot?</a>
+                                <Link to="/forgot-password" ripple={true} className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline cursor-pointer">Forgot?</Link>
                             </div>
                             <div className="relative group">
                                 <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">
