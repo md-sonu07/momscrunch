@@ -10,6 +10,7 @@ import { Link, NavLink, useLocation } from 'react-router-dom'
 import SearchDropdown from './SearchDropdown'
 import PincodePopup from '../common/PincodePopup'
 import { toast } from 'react-hot-toast'
+import { fetchStoreProfile } from '../../redux/thunk/storeProfileThunk'
 
 const Navbar = () => {
     const isDarkMode = useSelector((state) => state.theme.mode === 'dark')
@@ -17,6 +18,7 @@ const Navbar = () => {
     const { currentLocation } = useSelector((state) => state.location)
     const { user, isAuthenticated } = useSelector((state) => state.auth)
     const cartItemCount = useSelector(selectCartItemCount)
+    const { data: profile, loading: profileLoading } = useSelector((state) => state.storeProfile)
     const dispatch = useDispatch()
     const location = useLocation()
     const [isPincodeModalOpen, setIsPincodeModalOpen] = useState(false);
@@ -69,6 +71,13 @@ const Navbar = () => {
         }
     }, [isAuthenticated, dispatch]);
 
+    // Fetch store profile for branding
+    useEffect(() => {
+        if (!profile && !profileLoading) {
+            dispatch(fetchStoreProfile());
+        }
+    }, [dispatch, profile, profileLoading]);
+
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (searchRef.current && !searchRef.current.contains(event.target)) {
@@ -105,31 +114,46 @@ const Navbar = () => {
             className="sticky top-0 z-50 flex items-center justify-between border-b border-slate-200/60 dark:border-slate-800/60 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl px-4 xl:px-12 md:px-8 py-3 transition-all duration-300">
             <div className="flex items-center gap-4 md:gap-12">
                 <Link to="/" className="flex items-center gap-3 group">
-                    <div
-                        className="bg-primary w-9 h-9 rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-primary/20 transition-transform group-hover:scale-105">
-                        M
-                    </div>
-                    <div className="flex flex-col">
-                        <h1 className="text-slate-900 text-nowrap dark:text-white text-sm sm:text-lg font-black tracking-tight">
-                            Mom's <span className="text-primary italic">Crunch</span>
-                        </h1>
-                    </div>
+                    {profile?.logo ? (
+                        <img src={profile.logo} alt={profile.store_name} className="h-9 w-auto object-contain transition-transform group-hover:scale-105" />
+                    ) : (
+                        <>
+                            {profile?.logo_first_letter && (
+                                <div
+                                    className="bg-primary w-9 h-9 rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-primary/20 transition-transform group-hover:scale-105">
+                                    {profile.logo_first_letter}
+                                </div>
+                            )}
+                            <div className="flex flex-col">
+                                {profile?.store_name_full_html ? (
+                                    <h1
+                                        className="text-slate-900 text-nowrap dark:text-white text-sm sm:text-lg font-black tracking-tight"
+                                        dangerouslySetInnerHTML={{ __html: profile.store_name_full_html }}
+                                    />
+                                ) : (
+                                    <h1 className="text-slate-900 text-nowrap dark:text-white text-sm sm:text-lg font-black tracking-tight">
+                                        {profile?.store_name || "Mom's Crunch"}
+                                    </h1>
+                                )}
+                            </div>
+                        </>
+                    )}
                 </Link>
 
-                    <nav className="hidden md:flex items-center gap-3 xl:gap-7">
-                        <NavLink
-                            to="/shop" className={({ isActive }) => {
-                                const isShopActive = isActive || window.location.pathname.startsWith('/product/');
-                                return `nav-link dark:text-slate-200 text-sm font-bold hover:text-primary transition-colors inline-flex items-center gap-1.5 ${isShopActive ? 'active text-primary' : ''}`;
-                            }}>
-                            Shop
-                            <span className="flex h-1.5 w-1.5 rounded-full bg-primary animate-pulse"></span>
-                        </NavLink>
-                        <NavLink
-                            to="/our-story" className={({ isActive }) => `nav-link text-nowrap dark:text-slate-200 text-sm font-bold hover:text-primary transition-colors ${isActive ? 'active text-primary' : ''}`}
-                        >Our Story</NavLink>
-                        <NavLink
-                            to="/contact" className={({ isActive }) => `nav-link dark:text-slate-200 text-sm font-bold hover:text-primary transition-colors ${isActive ? 'active text-primary' : ''}`}
+                <nav className="hidden md:flex items-center gap-3 xl:gap-7">
+                    <NavLink
+                        to="/shop" className={({ isActive }) => {
+                            const isShopActive = isActive || window.location.pathname.startsWith('/product/');
+                            return `nav-link dark:text-slate-200 text-sm font-bold hover:text-primary transition-colors inline-flex items-center gap-1.5 ${isShopActive ? 'active text-primary' : ''}`;
+                        }}>
+                        Shop
+                        <span className="flex h-1.5 w-1.5 rounded-full bg-primary animate-pulse"></span>
+                    </NavLink>
+                    <NavLink
+                        to="/our-story" className={({ isActive }) => `nav-link text-nowrap dark:text-slate-200 text-sm font-bold hover:text-primary transition-colors ${isActive ? 'active text-primary' : ''}`}
+                    >Our Story</NavLink>
+                    <NavLink
+                        to="/contact" className={({ isActive }) => `nav-link dark:text-slate-200 text-sm font-bold hover:text-primary transition-colors ${isActive ? 'active text-primary' : ''}`}
                     >Contact</NavLink>
                 </nav>
             </div>

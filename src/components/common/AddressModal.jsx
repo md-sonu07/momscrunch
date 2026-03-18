@@ -404,6 +404,31 @@ const AddressModal = ({ isOpen, onClose, onSave, initialData }) => {
                             </div>
                         </div>
 
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">City</label>
+                                <input
+                                    required
+                                    type="text"
+                                    value={formData.city}
+                                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-white/5 rounded-xl px-5 py-4 text-xs font-bold focus:border-primary/40 focus:bg-white transition-all outline-none"
+                                    placeholder="City Name"
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">State</label>
+                                <input
+                                    required
+                                    type="text"
+                                    value={formData.state}
+                                    onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-white/5 rounded-xl px-5 py-4 text-xs font-bold focus:border-primary/40 focus:bg-white transition-all outline-none"
+                                    placeholder="State Name"
+                                />
+                            </div>
+                        </div>
+
                         <div className="space-y-1.5">
                             <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Complete Detailed Address</label>
                             <textarea

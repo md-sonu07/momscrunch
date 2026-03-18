@@ -16,7 +16,6 @@ const Footer = () => {
 
     const storeName = profile?.store_name || "Mom's Crunch";
     const storeDescription = profile?.description || 'Artisanal snacks curated for the discerning snacker. Handcrafted with love.';
-    const storeTagline = profile?.tagline || 'Freshly made with care.';
     const whatsappLink = profile?.whatsapp_number ? `https://wa.me/${profile.whatsapp_number}` : null;
     const socialLinks = [
         { Icon: Facebook, href: profile?.facebook_url, label: 'Facebook' },
@@ -38,21 +37,29 @@ const Footer = () => {
                                 <img
                                     src={profile.logo}
                                     alt={storeName}
-                                    className="w-11 h-11 rounded-lg object-cover shadow-lg shadow-primary/20 transition-transform group-hover:scale-110"
+                                    className="w-11 h-11 rounded-lg object-contain shadow-lg shadow-primary/20 transition-transform group-hover:scale-110"
                                 />
                             ) : (
-                                <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-white shadow-lg shadow-primary/20 transition-transform group-hover:scale-110">
-                                    <span className="font-black text-xl leading-none">{storeName.charAt(0)}</span>
-                                </div>
+                                <>
+                                    {profile?.logo_first_letter && (
+                                        <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-white shadow-lg shadow-primary/20 transition-transform group-hover:scale-110">
+                                            <span className="font-black text-xl leading-none">{profile.logo_first_letter}</span>
+                                        </div>
+                                    )}
+                                    <div>
+                                        {profile?.store_name_full_html ? (
+                                            <h2
+                                                className="text-2xl font-black tracking-tight text-slate-900 dark:text-white"
+                                                dangerouslySetInnerHTML={{ __html: profile.store_name_full_html }}
+                                            />
+                                        ) : (
+                                            <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+                                                {storeName}
+                                            </h2>
+                                        )}
+                                    </div>
+                                </>
                             )}
-                            <div>
-                                <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">
-                                    {storeName}
-                                </h2>
-                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary mt-1">
-                                    {storeTagline}
-                                </p>
-                            </div>
                         </div>
                         <p className="text-[13px] text-slate-500 dark:text-slate-400 leading-relaxed max-w-xs font-semibold opacity-80">
                             {storeDescription}

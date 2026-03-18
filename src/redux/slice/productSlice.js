@@ -1,5 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit';
-import { getProducts, getProductById, addProduct, editProduct, removeProduct } from '../thunk/productThunk';
+import { getProducts, getProductBySlug, addProduct, editProduct, removeProduct } from '../thunk/productThunk';
 
 const productSlice = createSlice({
     name: 'product',
@@ -36,14 +36,14 @@ const productSlice = createSlice({
                 state.error = action.payload;
             })
             // Get Single Product
-            .addCase(getProductById.pending, (state) => {
+            .addCase(getProductBySlug.pending, (state) => {
                 state.loading = true;
             })
-            .addCase(getProductById.fulfilled, (state, action) => {
+            .addCase(getProductBySlug.fulfilled, (state, action) => {
                 state.loading = false;
                 state.product = action.payload.data || action.payload;
             })
-            .addCase(getProductById.rejected, (state, action) => {
+            .addCase(getProductBySlug.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.payload;
             });

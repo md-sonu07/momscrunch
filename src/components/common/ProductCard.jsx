@@ -6,7 +6,7 @@ import { toast } from 'react-hot-toast';
 import { addItem } from '../../redux/thunk/cartThunk';
 import { showPopup } from '../../redux/slice/cartPopupSlice';
 import { addItemToWishlist, fetchWishlist, removeItemFromWishlist } from '../../redux/thunk/wishlistThunk';
-import { fetchProductById } from '../../api/product.api.js';
+import { fetchProductBySlug } from '../../api/product.api.js';
 
 const ProductCard = ({ product, variant = "vertical" }) => {
     const navigate = useNavigate();
@@ -50,7 +50,7 @@ const ProductCard = ({ product, variant = "vertical" }) => {
         let variants = product.variants ?? [];
 
         if (!variantId && variants.length === 0) {
-            const detailedProduct = await fetchProductById(id);
+            const detailedProduct = await fetchProductBySlug(product.slug);
             variants = detailedProduct?.variants ?? [];
         }
 
@@ -153,12 +153,12 @@ const ProductCard = ({ product, variant = "vertical" }) => {
             let variants = product.variants ?? [];
 
             if (!variantId && variants.length === 0) {
-                const detailedProduct = await fetchProductById(id);
+                const detailedProduct = await fetchProductBySlug(product.slug);
                 variants = detailedProduct?.variants ?? [];
             }
 
             if (!variantId && variants.length > 1) {
-                navigate(`/product/${id}`);
+                navigate(`/product/${product.slug}`);
                 return;
             }
 
@@ -248,7 +248,7 @@ const ProductCard = ({ product, variant = "vertical" }) => {
 
     return (
         <Link
-            to={`/product/${id}`}
+            to={`/product/${product.slug}`}
             className={`group relative flex transition-all duration-500 hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_20px_50px_rgba(0,0,0,0.3)] bg-white dark:bg-slate-900/60 backdrop-blur-sm border border-slate-100 dark:border-white/5 rounded-3xl ${theme.hoverShadow} ${isHorizontalMobile
                 ? "flex-row w-full p-3 md:flex-col md:p-5"
                 : "flex-col min-w-[260px] w-[260px] p-4 md:p-5"}`}
@@ -274,7 +274,7 @@ const ProductCard = ({ product, variant = "vertical" }) => {
                                 Processing
                             </div>
                         ) : tag && (
-                            <span className={`${tagBg || 'bg-slate-900/80'} backdrop-blur-md text-white font-black uppercase tracking-wider rounded-lg shadow-sm border border-white/10 text-[8px] md:text-[9px] px-2 py-1`}>
+                            <span className={`${tagBg || ''} bg-slate-900/80 backdrop-blur-md text-white font-black uppercase tracking-wider rounded-lg shadow-sm border border-white/10 text-[8px] md:text-[9px] px-2 py-1`}>
                                 {tag}
                             </span>
                         )}

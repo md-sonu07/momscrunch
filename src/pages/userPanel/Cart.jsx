@@ -236,22 +236,24 @@ const Cart = () => {
                         {cartItems.map((item) => (
                             <div key={item.id} className="bg-white/70 dark:bg-slate-900/40 backdrop-blur-2xl border border-white dark:border-slate-800 rounded-xl p-3 shadow-xl shadow-slate-200/50 dark:shadow-none grid grid-cols-[120px_1fr] gap-x-5 items-center relative group transition-all hover:border-primary/20">
                                 {/* Left side: Image */}
-                                <div className="aspect-square bg-slate-50 dark:bg-slate-800 rounded-2xl flex items-center justify-center text-4xl shadow-inner overflow-hidden">
+                                <Link to={`/product/${item.product_slug}`} className="aspect-square bg-slate-50 dark:bg-slate-800 rounded-2xl flex items-center justify-center text-4xl shadow-inner overflow-hidden hover:opacity-90 transition-opacity">
                                     <img
                                         src={item.product_image || 'https://images.unsplash.com/photo-1589113103503-496550346c1f?q=80&w=800&auto=format&fit=crop'}
                                         alt={item.product_name}
                                         className="w-full h-full object-cover"
                                     />
-                                </div>
+                                </Link>
 
                                 {/* Right side: Details & Controls */}
                                 <div className="flex flex-col justify-between py-0.5">
                                     {/* Top Section: Category, Name & Price */}
                                     <div className="pr-10">
                                         <div className="text-[10px] font-black text-primary uppercase tracking-widest mb-0.5">{item.weight}</div>
-                                        <h3 className="text-base font-black text-slate-900 dark:text-white tracking-tight leading-tight mb-0.5">
-                                            {item.product_name}
-                                        </h3>
+                                        <Link to={`/product/${item.product_slug}`} className="hover:text-primary transition-colors">
+                                            <h3 className="text-base font-black text-slate-900 dark:text-white tracking-tight leading-tight mb-0.5">
+                                                {item.product_name}
+                                            </h3>
+                                        </Link>
                                         <div className="flex items-center gap-2 mt-0.5">
                                             <div className="text-[11px] font-black text-primary uppercase tracking-widest">₹{item.product_price}</div>
                                             {parseFloat(item.product_original_price) > parseFloat(item.product_price) && (

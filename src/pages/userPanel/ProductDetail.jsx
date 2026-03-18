@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { getProductById } from '../../redux/thunk/productThunk';
+import { getProductBySlug } from '../../redux/thunk/productThunk';
 import { addItem } from '../../redux/thunk/cartThunk';
 import { showPopup } from '../../redux/slice/cartPopupSlice';
 import { getStoreSettings } from '../../redux/thunk/storeSettingsThunk';
@@ -27,7 +27,7 @@ import { toast } from 'react-hot-toast';
 import ProductReviews from '../../components/userComponents/product/ProductReviews';
 
 const ProductDetail = () => {
-    const { id } = useParams();
+    const { slug } = useParams();
     const navigate = useNavigate();
     const dispatch = useDispatch();
     const { product, loading, error } = useSelector((state) => state.product);
@@ -43,10 +43,10 @@ const ProductDetail = () => {
     const [otherProducts, setOtherProducts] = useState([]);
 
     useEffect(() => {
-        dispatch(getProductById(id));
+        dispatch(getProductBySlug(slug));
         dispatch(getStoreSettings()).catch(() => { });
         window.scrollTo(0, 0);
-    }, [dispatch, id]);
+    }, [dispatch, slug]);
 
     useEffect(() => {
         if (isAuthenticated) {
@@ -434,12 +434,12 @@ const ProductDetail = () => {
                         <div className="bg-slate-50 dark:bg-slate-900/40 p-5 rounded-[1.5rem] border border-slate-100 dark:border-white/5 mb-6">
                             {/* Price */}
                             <div className="flex items-end gap-3 mb-6">
-                                <div className="flex flex-col">
+                                <div className="flex gap-2">
                                     <span className="text-3xl font-black text-slate-900 dark:text-white leading-none">
                                         ₹{price}
                                     </span>
                                     {oldPrice && (
-                                        <span className="text-lg font-bold text-slate-400 line-through leading-none">
+                                        <span className="text-lg mt-2 font-bold text-slate-400 line-through leading-none">
                                             ₹{oldPrice}
                                         </span>
                                     )}

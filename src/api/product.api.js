@@ -5,8 +5,8 @@ export const fetchProducts = async (params) => {
     return response.data;
 };
 
-export const fetchProductById = async (id) => {
-    const response = await axiosApi.get(`/api/shop/products/${id}/`);
+export const fetchProductBySlug = async (slug) => {
+    const response = await axiosApi.get(`/api/shop/products/${slug}/`);
     return response.data;
 };
 

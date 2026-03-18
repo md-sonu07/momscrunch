@@ -38,6 +38,8 @@ const Wishlist = () => {
             name: item.product_name,
             product_weight: item.product_weight,
             product_price: item.product_price,
+            product_old_price: item.product_original_price,
+            status: item.product_status,
             product_image: item.product_image,
             slug: item.product_slug,
             is_wishlisted: true,

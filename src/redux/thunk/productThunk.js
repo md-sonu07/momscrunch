@@ -1,7 +1,7 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import {
     fetchProducts as fetchProductsApi,
-    fetchProductById as fetchProductByIdApi,
+    fetchProductBySlug as fetchProductBySlugApi,
     createProduct as createProductApi,
     updateProduct as updateProductApi,
     deleteProduct as deleteProductApi
@@ -19,11 +19,11 @@ export const getProducts = createAsyncThunk(
     }
 );
 
-export const getProductById = createAsyncThunk(
-    'product/getProductById',
-    async (id, { rejectWithValue }) => {
+export const getProductBySlug = createAsyncThunk(
+    'product/getProductBySlug',
+    async (slug, { rejectWithValue }) => {
         try {
-            const data = await fetchProductByIdApi(id);
+            const data = await fetchProductBySlugApi(slug);
             return data;
         } catch (error) {
             return rejectWithValue(error.response?.data?.error || 'Failed to fetch product');
