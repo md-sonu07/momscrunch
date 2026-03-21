@@ -238,9 +238,9 @@ const Navbar = () => {
                     {/* Profile User */}
                     <Link
                         to="/profile"
-                        className="hidden md:flex items-center cursor-pointer justify-center size-10 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-full hover:bg-primary dark:hover:bg-primary hover:text-white dark:hover:text-white transition-all duration-300 shadow-md shadow-slate-900/10 dark:shadow-white/5 active:scale-95 group overflow-hidden font-black text-xs"
+                        className="hidden md:flex items-center cursor-pointer justify-center size-10 border-2 border-white/40 dark:border-white/5 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-full hover:bg-primary dark:hover:bg-primary hover:text-white dark:hover:text-white transition-all duration-300 shadow-md shadow-slate-900/10 dark:shadow-white/5 active:scale-95 group overflow-hidden font-black text-xs"
                     >
-                        {user?.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase() : <User size={18} />}
+                        {user?.name && <User size={18} />}
                     </Link>
 
                 </div>

@@ -1,5 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit';
-import { getReviewsByProduct, postReview } from '../thunk/reviewThunk';
+import { getReviewsByProduct, postReview, removeReview } from '../thunk/reviewThunk';
 
 const reviewSlice = createSlice({
     name: 'review',
@@ -8,6 +8,7 @@ const reviewSlice = createSlice({
         loading: false,
         error: null,
         submitting: false,
+        deleting: null,
     },
     reducers: {
         clearReviewError: (state) => {
@@ -42,6 +43,17 @@ const reviewSlice = createSlice({
             .addCase(postReview.rejected, (state, action) => {
                 state.submitting = false;
                 state.error = action.payload;
+            })
+            // Delete Review
+            .addCase(removeReview.pending, (state, action) => {
+                state.deleting = action.meta.arg;
+            })
+            .addCase(removeReview.fulfilled, (state, action) => {
+                state.deleting = null;
+                state.reviews = state.reviews.filter(r => r.id !== action.payload);
+            })
+            .addCase(removeReview.rejected, (state) => {
+                state.deleting = null;
             });
     },
 });

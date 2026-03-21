@@ -17,6 +17,49 @@ const PincodePopup = ({ isOpen, onClose, onSave, currentPincode }) => {
         }
     }, [isOpen, currentPincode]);
 
+    const extractValidPincode = (postcode) => {
+        if (!postcode) return null;
+        // Handle range formats like "110001-110099" — take the first part
+        const parts = postcode.split(/[-–,]/);
+        const cleaned = (parts[0] || '').replace(/\D/g, '');
+        // Indian pincodes are exactly 6 digits and start with 1-9
+        if (/^[1-9]\d{5}$/.test(cleaned)) return cleaned;
+        return null;
+    };
+
+    const fetchPincodeFromCoords = async (latitude, longitude) => {
+        // Primary: Nominatim with high zoom for precise address
+        try {
+            const response = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
+                { headers: { 'User-Agent': 'MomsCrunch-WebApp/1.0' } }
+            );
+            if (response.ok) {
+                const data = await response.json();
+                const pincode = extractValidPincode(data?.address?.postcode);
+                if (pincode) return pincode;
+            }
+        } catch {
+            // Nominatim failed, try fallback
+        }
+
+        // Fallback: BigDataCloud free reverse geocoding
+        try {
+            const response = await fetch(
+                `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+            );
+            if (response.ok) {
+                const data = await response.json();
+                const pincode = extractValidPincode(data?.postcode);
+                if (pincode) return pincode;
+            }
+        } catch {
+            // Fallback also failed
+        }
+
+        return null;
+    };
+
     const fetchCurrentLocationPincode = () => {
         setIsLocating(true);
         setError('');
@@ -31,25 +74,29 @@ const PincodePopup = ({ isOpen, onClose, onSave, currentPincode }) => {
             async (position) => {
                 try {
                     const { latitude, longitude } = position.coords;
-                    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`);
-                    const data = await response.json();
+                    const pincode = await fetchPincodeFromCoords(latitude, longitude);
 
-                    if (data && data.address && data.address.postcode) {
-                        const cityPincode = data.address.postcode.replace(/\D/g, '').substring(0, 6);
-                        setPincode(cityPincode);
+                    if (pincode) {
+                        setPincode(pincode);
                     } else {
-                        setError('Pincode not found for this area');
+                        setError('Pincode not found for this area. Please enter manually.');
                     }
                 } catch (err) {
-                    setError('Error fetching location');
+                    setError('Error fetching location. Please enter manually.');
                 } finally {
                     setIsLocating(false);
                 }
             },
-            () => {
-                setError('Location access denied');
+            (geoError) => {
+                const messages = {
+                    1: 'Location access denied. Please allow location permission.',
+                    2: 'Location unavailable. Please enter pincode manually.',
+                    3: 'Location request timed out. Please try again.',
+                };
+                setError(messages[geoError.code] || 'Could not get location.');
                 setIsLocating(false);
-            }
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
         );
     };
 
@@ -93,7 +140,7 @@ const PincodePopup = ({ isOpen, onClose, onSave, currentPincode }) => {
                 setError(data.message || 'Area Not Covered');
             }
         } catch (err) {
-            setError('Validation failed. Try again.');
+            setError('Could not connect to validation service. Please check your internet or try again later.');
         } finally {
             setIsValidating(false);
         }

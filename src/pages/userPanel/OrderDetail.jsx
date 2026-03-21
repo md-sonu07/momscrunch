@@ -5,7 +5,7 @@ import {
     CheckCircle2, Box, Truck, ShieldCheck, ArrowRight,
     ShoppingBag, Download, AlertCircle, Printer
 } from 'lucide-react';
-import { getOrderDetails } from '../../api/order.api';
+import { getOrderDetails, cancelOrder } from '../../api/order.api';
 import { formatCurrency } from '../../utils/orderSummary';
 import { toast } from 'react-hot-toast';
 
@@ -15,20 +15,36 @@ const OrderDetail = () => {
     const [order, setOrder] = useState(null);
     const [loading, setLoading] = useState(true);
 
+    const fetchDetails = async () => {
+        try {
+            const data = await getOrderDetails(id);
+            setOrder(data);
+        } catch (error) {
+            toast.error('Failed to load order details');
+            navigate('/profile/orders');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        const fetchDetails = async () => {
+        fetchDetails();
+    }, [id, navigate]);
+
+    const handleCancel = async () => {
+        if (window.confirm("Are you sure you want to cancel this order? This action cannot be undone.")) {
             try {
-                const data = await getOrderDetails(id);
-                setOrder(data);
+                setLoading(true);
+                await cancelOrder(id);
+                toast.success('Order cancelled successfully');
+                fetchDetails(); // Refresh details
             } catch (error) {
-                toast.error('Failed to load order details');
-                navigate('/profile/orders');
+                toast.error(error.response?.data?.error || 'Failed to cancel order');
             } finally {
                 setLoading(false);
             }
-        };
-        fetchDetails();
-    }, [id, navigate]);
+        }
+    };
 
     if (loading) {
         return (
@@ -80,6 +96,23 @@ const OrderDetail = () => {
                     <span className="text-xs font-black uppercase tracking-[0.2em]">{order.status_display}</span>
                 </div>
             </div>
+
+            {/* Cancelled Status Banner */}
+            {order.status?.toLowerCase() === 'cancelled' && (
+                <div className="mb-8 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-6 animate-in fade-in slide-in-from-top-4 duration-500">
+                    <div className="flex items-center gap-6">
+                        <div className="w-14 h-14 bg-rose-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-rose-500/20 rotate-3">
+                            <XCircle size={24} />
+                        </div>
+                        <div className="text-center sm:text-left">
+                            <h3 className="text-lg font-black text-rose-600 dark:text-rose-400 tracking-tight mb-1 uppercase">Order Cancelled</h3>
+                            <p className="text-[10px] font-bold text-rose-500 dark:text-rose-500/80 uppercase tracking-widest leading-relaxed">
+                                This order was cancelled and will not be processed further.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Left Column: Items & Timeline */}
@@ -263,10 +296,24 @@ const OrderDetail = () => {
                                     ) : (
                                         <div className="py-12 bg-slate-50/50 dark:bg-slate-800/20 rounded-2xl border-2 border-dashed border-slate-100 dark:border-slate-800 text-center">
                                             <div className="w-16 h-16 bg-white dark:bg-slate-900 shadow-sm border border-slate-100 dark:border-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 group hover:scale-110 transition-transform">
-                                                <Package size={24} className="text-slate-200 dark:text-slate-700 group-hover:text-primary transition-colors" />
+                                                {order.status?.toLowerCase() === 'cancelled' ? (
+                                                    <XCircle size={24} className="text-rose-500" />
+                                                ) : (
+                                                    <Package size={24} className="text-slate-200 dark:text-slate-700 group-hover:text-primary transition-colors" />
+                                                )}
                                             </div>
-                                            <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-1">Awaiting Tracking Data</h4>
-                                            <p className="text-[10px] text-slate-400 font-medium max-w-[200px] mx-auto">Shiprocket tracking information becomes available once the package is manifest.</p>
+                                            <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-1">
+                                                {order.status?.toLowerCase() === 'cancelled' 
+                                                    ? 'Order Cancelled' 
+                                                    : order.shiprocket_order_id ? 'Preparing for Shipment' : 'Awaiting Fulfillment'}
+                                            </h4>
+                                            <p className="text-[10px] text-slate-400 font-medium max-w-[200px] mx-auto">
+                                                {order.status?.toLowerCase() === 'cancelled'
+                                                    ? "This order has been cancelled. No tracking information is available."
+                                                    : order.shiprocket_order_id 
+                                                        ? "Your order has been received by Shiprocket and is being processed for pickup." 
+                                                        : "We're setting up the shipping details. Tracking info will appear here soon."}
+                                            </p>
                                         </div>
                                     )}
                                 </div>
@@ -382,6 +429,14 @@ const OrderDetail = () => {
                                     <Download size={18} className="group-hover:-translate-y-1 transition-transform" />
                                     Download Invoice
                                 </a>
+                            )}
+                            {['pending', 'paid'].includes(order.status?.toLowerCase()) && (
+                                <button 
+                                    onClick={handleCancel}
+                                    className="w-full bg-white dark:bg-slate-900 text-rose-500 py-4 rounded-2xl font-black uppercase tracking-widest text-[11px] border border-rose-200 dark:border-rose-900/30 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all active:scale-95 shadow-sm"
+                                >
+                                    Cancel Order
+                                </button>
                             )}
                             <button className="w-full bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 py-4 rounded-2xl font-black uppercase tracking-widest text-[11px] border border-slate-200 dark:border-slate-800 hover:border-primary hover:text-primary transition-all active:scale-95">
                                 Need Help?

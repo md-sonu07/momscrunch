@@ -1,5 +1,5 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
-import { fetchReviews, createReview } from '../../api/review.api';
+import { fetchReviews, createReview, deleteReview } from '../../api/review.api';
 
 export const getReviewsByProduct = createAsyncThunk(
     'review/getReviewsByProduct',
@@ -25,6 +25,18 @@ export const postReview = createAsyncThunk(
                 (error.response?.data && typeof error.response.data === 'object' ? Object.values(error.response.data)[0][0] : null) ||
                 'Failed to post review';
             return rejectWithValue(message);
+        }
+    }
+);
+
+export const removeReview = createAsyncThunk(
+    'review/removeReview',
+    async (reviewId, { rejectWithValue }) => {
+        try {
+            await deleteReview(reviewId);
+            return reviewId;
+        } catch (error) {
+            return rejectWithValue(error.response?.data?.error || 'Failed to delete review');
         }
     }
 );

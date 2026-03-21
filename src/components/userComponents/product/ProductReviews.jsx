@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Star, MessageSquare, Send, User, ThumbsUp, Loader2 } from 'lucide-react';
+import { Star, MessageSquare, Send, User, ThumbsUp, Loader2, Trash2 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
-import { getReviewsByProduct, postReview } from '../../../redux/thunk/reviewThunk';
+import { getReviewsByProduct, postReview, removeReview } from '../../../redux/thunk/reviewThunk';
 import { toast } from 'react-hot-toast';
 
 const ProductReviews = ({ productName, productId }) => {
     const dispatch = useDispatch();
-    const { reviews, loading, submitting } = useSelector((state) => state.review);
-    const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
+    const { reviews, loading, submitting, deleting } = useSelector((state) => state.review);
+    const { isAuthenticated, user } = useSelector((state) => state.auth);
 
     const [rating, setRating] = useState(0);
     const [hover, setHover] = useState(0);
@@ -201,9 +201,35 @@ const ProductReviews = ({ productName, productId }) => {
                                             <ThumbsUp size={14} />
                                             Helpful ({review.likes || 0})
                                         </button>
-                                        <div className="flex items-center gap-2">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                                            <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Verified Purchase</span>
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex items-center gap-2">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                                <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Verified Purchase</span>
+                                            </div>
+                                            {isAuthenticated && user?.id === review.user?.id && (
+                                                <button
+                                                    onClick={async () => {
+                                                        if (window.confirm('Are you sure you want to delete this review?')) {
+                                                            try {
+                                                                await dispatch(removeReview(review.id)).unwrap();
+                                                                toast.success('Review deleted successfully');
+                                                            } catch (err) {
+                                                                toast.error(err || 'Failed to delete review');
+                                                            }
+                                                        }
+                                                    }}
+                                                    disabled={deleting === review.id}
+                                                    className="flex items-center gap-1.5 text-[10px] font-black text-slate-400 hover:text-red-500 transition-colors uppercase tracking-widest cursor-pointer disabled:opacity-50"
+                                                    title="Delete your review"
+                                                >
+                                                    {deleting === review.id ? (
+                                                        <Loader2 size={13} className="animate-spin" />
+                                                    ) : (
+                                                        <Trash2 size={13} />
+                                                    )}
+                                                    Delete
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
