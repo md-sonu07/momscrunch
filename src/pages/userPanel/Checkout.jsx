@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
     ChevronLeft,
     ChevronRight,
@@ -42,6 +42,8 @@ const Checkout = () => {
     const [showCouponInput, setShowCouponInput] = useState(false);
     const [couponCode, setCouponCode] = useState('');
     const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+    const [pendingOrderId, setPendingOrderId] = useState(null);
+    const orderPlacedRef = useRef(false);
 
     const navigate = useNavigate();
     const dispatch = useDispatch();
@@ -73,10 +75,10 @@ const Checkout = () => {
         };
     }, [dispatch]);
 
-    // Redirect to shop if cart is empty
+    // Redirect to shop if cart is empty (but not after a successful order)
     const { cart, loading: cartLoading } = useSelector((state) => state.cart);
     useEffect(() => {
-        if (!cartLoading && cart && cartItems.length === 0) {
+        if (!cartLoading && cart && cartItems.length === 0 && !orderPlacedRef.current) {
             navigate('/shop');
             toast.error('Your bucket is empty. Let\'s crunch some items first!', {
                 id: 'empty-cart-error'
@@ -226,19 +228,26 @@ const Checkout = () => {
         setIsProcessing(true);
 
         try {
-            // 1. Create order in backend
-            const orderRes = await placeOrder(shippingForm, paymentMethod);
-            const { order_id } = orderRes;
+            // 1. Create order in backend (only if we don't have one already)
+            let orderId = pendingOrderId;
+            if (!orderId) {
+                const orderRes = await placeOrder(shippingForm, paymentMethod);
+                orderId = orderRes.order_id;
+                setPendingOrderId(orderId);
+            }
 
             if (paymentMethod === 'cod') {
                 toast.success('Order Placed Successfully! Your premium crunch is on the way.');
-                // Navigate to orders page
+                // Mark order as placed to prevent empty-cart redirect
+                orderPlacedRef.current = true;
+                // Refresh cart to clear badge count
+                dispatch(fetchCart());
                 navigate('/profile/orders');
                 return;
             }
 
             // 2. Create Razorpay order
-            const razorpayOrder = await createPaymentOrder(order_id);
+            const razorpayOrder = await createPaymentOrder(orderId);
 
             // 3. Configure Razorpay options
             const options = {
@@ -257,6 +266,11 @@ const Checkout = () => {
                             razorpay_signature: response.razorpay_signature,
                         });
                         toast.success('Payment Successful! Your crunch is on the way.');
+                        // Mark order as placed to prevent empty-cart redirect
+                        orderPlacedRef.current = true;
+                        // Refresh cart to clear badge count
+                        dispatch(fetchCart());
+                        setPendingOrderId(null);
                         navigate('/profile/orders');
                     } catch (error) {
                         toast.error('Payment verification failed. Please contact support.');
@@ -274,6 +288,7 @@ const Checkout = () => {
                 modal: {
                     ondismiss: () => {
                         setIsProcessing(false);
+                        // Don't clear pendingOrderId - user can retry with same order
                     }
                 }
             };
@@ -289,6 +304,8 @@ const Checkout = () => {
             console.error(error);
             toast.error(error.response?.data?.detail || 'Failed to initiate payment');
             setIsProcessing(false);
+            // Clear pending order ID on error so a fresh order can be created
+            setPendingOrderId(null);
         }
     };
 

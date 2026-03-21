@@ -288,15 +288,17 @@ const OrderDetail = () => {
                             <div className="space-y-4">
                                 <div>
                                     <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Recipient</p>
-                                    <p className="text-sm font-extrabold text-slate-900 dark:text-white">{order.shipping_address.name}</p>
+                                    <p className="text-sm font-extrabold text-slate-900 dark:text-white capitalize">{order.shipping_address.name}</p>
                                     <p className="text-xs font-bold text-slate-500">{order.shipping_address.phone}</p>
                                 </div>
                                 <div>
                                     <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Address</p>
-                                    <p className="text-xs font-bold text-slate-500 leading-relaxed">
-                                        {order.shipping_address.street}<br />
-                                        {order.shipping_address.landmark && <>{order.shipping_address.landmark}<br /></>}
-                                        {order.shipping_address.city}, {order.shipping_address.state} - {order.shipping_address.pin_code}<br />
+                                    <p className="text-xs capitalize font-bold text-slate-500 leading-relaxed">
+                                        {order.shipping_address.street}
+                                        {order.shipping_address.landmark && <>, {order.shipping_address.landmark}</>}
+                                        <br />
+                                        {order.shipping_address.city}, {order.shipping_address.state} – {order.shipping_address.pin_code}
+                                        <br />
                                         {order.shipping_address.country}
                                     </p>
                                 </div>
@@ -317,8 +319,11 @@ const OrderDetail = () => {
                             <div>
                                 <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Payment Method</p>
                                 <p className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                                    <ShieldCheck size={16} className="text-emerald-500" />
-                                    Razorpay Online
+                                    {order.payment_method === 'cod' ? (
+                                        <><Truck size={16} className="text-amber-500" /> Cash on Delivery</>
+                                    ) : (
+                                        <><ShieldCheck size={16} className="text-emerald-500" /> Razorpay Online</>
+                                    )}
                                 </p>
                             </div>
                             {order.razorpay_order_id && (
