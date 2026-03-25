@@ -163,7 +163,7 @@ const OrderDetail = () => {
                             </div>
                             <div className="text-center md:text-left">
                                 <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Discount</p>
-                                <p className="text-sm font-black text-emerald-500">-₹{formatCurrency(order.discount_price)}</p>
+                                <p className="text-sm font-black text-emerald-500">₹{formatCurrency(order.discount_price)}</p>
                             </div>
                             <div className="text-center md:text-left">
                                 <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Tax/Gst</p>
@@ -192,7 +192,7 @@ const OrderDetail = () => {
 
                         <div className="relative pl-4 sm:pl-8 space-y-0">
                             {/* Visual Connecting Line */}
-                            <div className="absolute left-[15px] sm:left-[27px] top-2 bottom-2 w-0.5 bg-gradient-to-b from-primary via-slate-200 to-slate-100 dark:via-slate-800 dark:to-slate-900"></div>
+                            <div className="absolute left-[15px] sm:left-[27px] top-2 bottom-2 w-0.5 bg-linear-to-b from-primary via-slate-200 to-slate-100 dark:via-slate-800 dark:to-slate-900"></div>
 
                             {/* Local Delivery Journey */}
                             {order.delivery_type === 'local' && (
