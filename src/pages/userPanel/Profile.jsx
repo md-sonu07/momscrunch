@@ -238,8 +238,8 @@ const Profile = () => {
                                     <Skeleton key={i} variant="rectangular" height="80px" className="rounded-xl" />
                                 ))
                             ) : orders && orders.length > 0 ? (
-                                orders.slice(0, 3).map((order, idx) => {
-                                    const firstItem = order.items?.[0];
+                                orders.slice(-3).reverse().map((order, idx) => {
+                                    const firstItem = order.items[order.items.length - 1] ;
                                     const statusColors = {
                                         pending: "bg-amber-500/10 text-amber-500 border-amber-500/20",
                                         paid: "bg-blue-500/10 text-blue-500 border-blue-500/20",

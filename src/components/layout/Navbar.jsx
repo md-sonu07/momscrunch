@@ -24,6 +24,8 @@ const Navbar = () => {
     const [isPincodeModalOpen, setIsPincodeModalOpen] = useState(false);
     const searchRef = useRef(null);
 
+    console.log("user", user)
+
     // Dynamic label for Navbar: Showing city primarily
     const locationLabel = currentLocation.city || currentLocation.pincode || 'Select Area';
 
@@ -238,9 +240,9 @@ const Navbar = () => {
                     {/* Profile User */}
                     <Link
                         to="/profile"
-                        className="hidden md:flex items-center cursor-pointer justify-center size-10 border-2 border-white/40 dark:border-white/5 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-full hover:bg-primary dark:hover:bg-primary hover:text-white dark:hover:text-white transition-all duration-300 shadow-md shadow-slate-900/10 dark:shadow-white/5 active:scale-95 group overflow-hidden font-black text-xs"
+                        className="hidden md:flex items-center cursor-pointer capitalize justify-center size-10 border-2 border-white/40 dark:border-white/5 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-full hover:bg-primary dark:hover:bg-primary hover:text-white dark:hover:text-white transition-all duration-300 shadow-md shadow-slate-900/10 dark:shadow-white/5 active:scale-95 group overflow-hidden font-black text-xs"
                     >
-                        {user?.name && <User size={18} />}
+                        {user ? user.first_name.charAt(0) + user.last_name.charAt(0) : <User size={18} />}
                     </Link>
 
                 </div>

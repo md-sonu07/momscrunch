@@ -275,7 +275,7 @@ const ProductCard = ({ product, variant = "vertical" }) => {
                             </div>
                         ) : tag && (
                             <span className={`${tagBg || ''} bg-slate-900/80 backdrop-blur-md text-white font-black uppercase tracking-wider rounded-lg shadow-sm border border-white/10 text-[8px] md:text-[9px] px-2 py-1`}>
-                                {tag}
+                                {tag || ""}
                             </span>
                         )}
                     </div>
