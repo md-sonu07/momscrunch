@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
+import { applyCoupon, removeCoupon } from '../../api/cart.api';
 import { fetchCart, updateQuantity, deleteItem } from '../../redux/thunk/cartThunk';
 import { getStoreSettings } from '../../redux/thunk/storeSettingsThunk';
 import { selectCartItems } from '../../redux/slice/cartSlice';
@@ -23,12 +24,17 @@ import { selectAddresses, selectDefaultAddress } from '../../redux/slice/address
 import { calculateOrderSummary, formatCurrency } from '../../utils/orderSummary';
 import { toast } from 'react-hot-toast';
 import { placeOrder, createPaymentOrder, verifyPayment } from '../../api/payment.api';
+import { getShippingCharges } from '../../api/shipping.api';
 
 const Checkout = () => {
     const [isProcessing, setIsProcessing] = useState(false);
     const [step, setStep] = useState(1);
     const [paymentMethod, setPaymentMethod] = useState('online');
     const [selectedAddressId, setSelectedAddressId] = useState(null);
+    const [shippingCharges, setShippingCharges] = useState(0);
+    const [isFetchingShipping, setIsFetchingShipping] = useState(false);
+    const [shippingError, setShippingError] = useState(null);
+    const [deliveryMethod, setDeliveryMethod] = useState(null);
     const [shippingForm, setShippingForm] = useState({
         name: '',
         phone: '',
@@ -110,6 +116,7 @@ const Checkout = () => {
         }
     }, [defaultAddress, selectedAddressId]);
 
+    // Calculate subtotal first as it's needed by useEffect
     const { subtotal, originalSubtotal, totalDiscount } = useMemo(() => {
         const selling = cartItems.reduce((acc, item) => acc + (parseFloat(item.product_price) * item.quantity), 0);
         const original = cartItems.reduce((acc, item) => acc + (parseFloat(item.product_original_price || item.product_price) * item.quantity), 0);
@@ -117,11 +124,48 @@ const Checkout = () => {
         return { subtotal: selling, originalSubtotal: original, totalDiscount: discount };
     }, [cartItems]);
 
+    // Fetch shipping charges when pincode changes
+    useEffect(() => {
+        const fetchShippingCharges = async () => {
+            if (!shippingForm.pin_code || shippingForm.pin_code.length !== 6) {
+                setShippingCharges(0);
+                setShippingError(null);
+                setDeliveryMethod(null);
+                return;
+            }
+
+            setIsFetchingShipping(true);
+            setShippingError(null);
+            
+            try {
+                console.log('Sending to API - pincode:', shippingForm.pin_code, 'cart_total:', subtotal);
+                const response = await getShippingCharges({
+                    pincode: shippingForm.pin_code,
+                    cart_total: subtotal
+                });
+                
+                console.log('Shipping API response:', response);
+                setShippingCharges(response.shipping_charges || 0);
+                setDeliveryMethod(response.delivery_method || null);
+                console.log('Delivery method set:', response.delivery_method);
+            } catch (error) {
+                console.error('Error fetching shipping charges:', error);
+                setShippingError(error.response?.data?.detail || 'Failed to fetch shipping charges');
+                setShippingCharges(0);
+                setDeliveryMethod(null);
+            } finally {
+                setIsFetchingShipping(false);
+            }
+        };
+
+        fetchShippingCharges();
+    }, [shippingForm.pin_code, subtotal]);
+
     const cartSummary = useMemo(() => {
         const summary = calculateOrderSummary({
             subtotal,
             gstPercentage,
-            deliveryCharge,
+            deliveryCharge: shippingCharges, // Use dynamic shipping charges
             freeShippingThreshold,
             couponDiscount: cart?.discount || 0,
         });
@@ -130,7 +174,7 @@ const Checkout = () => {
             ...summary,
             items: cartItems,
         };
-    }, [cartItems, subtotal, gstPercentage, deliveryCharge, freeShippingThreshold, cart?.discount]);
+    }, [cartItems, subtotal, gstPercentage, shippingCharges, freeShippingThreshold, cart?.discount]);
 
     const steps = [
         { id: 1, label: "Shipping", icon: MapPin },
@@ -196,7 +240,6 @@ const Checkout = () => {
         if (!couponCode.trim()) return;
         setIsApplyingCoupon(true);
         try {
-            const { applyCoupon } = await import('../../api/cart.api');
             await applyCoupon(couponCode);
             await dispatch(fetchCart()).unwrap();
             toast.success('Coupon applied successfully!');
@@ -212,7 +255,6 @@ const Checkout = () => {
     const handleRemoveCoupon = async () => {
         setIsApplyingCoupon(true);
         try {
-            const { removeCoupon } = await import('../../api/cart.api');
             await removeCoupon();
             await dispatch(fetchCart()).unwrap();
             toast.success('Coupon removed');
@@ -535,6 +577,39 @@ const Checkout = () => {
                                             />
                                         </div>
                                     </div>
+
+                                    {/* Shipping Information */}
+                                    {shippingForm.pin_code && shippingForm.pin_code.length === 6 && (
+                                        <div className="space-y-3 mt-6 pt-6 border-t border-slate-100 dark:border-slate-800">
+                                            <div className="flex items-center justify-between">
+                                                <div>
+                                                    <h3 className="text-sm font-black text-slate-900 dark:text-white mb-1">Shipping Information</h3>
+                                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                                                        Based on your pincode {shippingForm.pin_code}
+                                                    </p>
+                                                </div>
+                                                {deliveryMethod && (
+                                                    <div className="text-right">
+                                                        <p className="text-xs font-black text-primary">{deliveryMethod}</p>
+                                                    </div>
+                                                )}
+                                                {isFetchingShipping && (
+                                                <div className="flex items-center gap-2 text-slate-400">
+                                                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                                                </div>
+                                            )}
+                                                
+                                            </div>
+
+                                            {shippingError && (
+                                                <div className="bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 rounded-xl p-3">
+                                                    <p className="text-[9px] font-bold text-rose-600 dark:text-rose-400">{shippingError}</p>
+                                                </div>
+                                            )}
+
+                                            
+                                        </div>
+                                    )}
                                 </form>
                             </div>
                         )}
@@ -615,7 +690,7 @@ const Checkout = () => {
                                         <div className="p-2 bg-slate-50 dark:bg-slate-800 rounded-lg text-primary"><Truck size={20} /></div>
                                         <div>
                                             <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Delivery</div>
-                                            <div className="text-sm font-extrabold text-slate-900 dark:text-white">Mar 15 - Mar 18</div>
+                                            <div className="text-sm font-extrabold text-slate-900 dark:text-white">Within 1 Week</div>
                                         </div>
                                     </div>
                                     <div className="flex items-start gap-3">
@@ -809,7 +884,7 @@ const Checkout = () => {
                                             </div>
                                         )
                                     ) : (
-                                        <div className="flex items-center justify-between bg-emerald-50/50 dark:bg-emerald-500/5 border border-emerald-100/50 dark:border-emerald-500/10 rounded-2xl p-4 animate-in zoom-in-95 duration-300">
+                                        <div className="flex items-center justify-between bg-emerald-50/50 dark:bg-emerald-500/5 border border-emerald-100/50 dark:border-emerald-500/10 rounded-xl p-4 animate-in zoom-in-95 duration-300">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20">
                                                     <CheckCircle2 size={16} />
@@ -904,7 +979,7 @@ const Checkout = () => {
                                     <div className="flex flex-col items-center text-center gap-1.5 border-r border-slate-200 dark:border-slate-700">
                                         <Truck size={14} className="text-primary" />
                                         <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Delivery</div>
-                                        <div className="text-[9px] font-extrabold text-slate-900 dark:text-white">Mar 15-18</div>
+                                        <div className="text-[9px] font-extrabold text-slate-900 dark:text-white">Within 1 Week</div>
                                     </div>
                                     <div className="flex flex-col items-center text-center gap-1.5 border-r border-slate-200 dark:border-slate-700">
                                         <ShieldCheck size={14} className="text-primary" />

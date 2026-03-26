@@ -7,6 +7,7 @@ import { showPopup } from '../../redux/slice/cartPopupSlice';
 import { getStoreSettings } from '../../redux/thunk/storeSettingsThunk';
 import { addItemToWishlist, fetchWishlist, removeItemFromWishlist } from '../../redux/thunk/wishlistThunk';
 import { fetchProducts } from '../../api/product.api.js';
+import { getShippingCharges } from '../../api/shipping.api';
 import ProductCard from '../../components/common/ProductCard';
 import Skeleton from '../../components/common/Skeleton';
 import {
@@ -32,6 +33,7 @@ const ProductDetail = () => {
     const dispatch = useDispatch();
     const { product, loading, error } = useSelector((state) => state.product);
     const { deliveryCharge, loading: storeSettingsLoading } = useSelector((state) => state.storeSettings);
+    const currentLocation = useSelector((state) => state.location.currentLocation);
     const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
     const wishlistItems = useSelector((state) => state.wishlist.items);
     const wishlistPendingProductIds = useSelector((state) => state.wishlist.pendingProductIds);
@@ -41,12 +43,46 @@ const ProductDetail = () => {
     const [selectedImage, setSelectedImage] = useState(0);
     const [relatedProducts, setRelatedProducts] = useState([]);
     const [otherProducts, setOtherProducts] = useState([]);
+    const [dynamicShippingCharge, setDynamicShippingCharge] = useState(0);
+    const [isFetchingShipping, setIsFetchingShipping] = useState(false);
 
     useEffect(() => {
         dispatch(getProductBySlug(slug));
         dispatch(getStoreSettings()).catch(() => { });
         window.scrollTo(0, 0);
     }, [dispatch, slug]);
+
+    // Fetch shipping charges based on navbar pincode and product price
+    useEffect(() => {
+        const fetchShippingCharges = async () => {
+            if (!currentLocation.pincode || !product) {
+                setDynamicShippingCharge(0);
+                return;
+            }
+
+            setIsFetchingShipping(true);
+            
+            try {
+                const response = await getShippingCharges({
+                    pincode: currentLocation.pincode,
+                    cart_total: product.discounted_price || product.price
+                });
+                
+                setDynamicShippingCharge(response.shipping_charges || 0);
+            } catch (error) {
+                console.error('Error fetching shipping charges:', error);
+                setDynamicShippingCharge(0);
+            } finally {
+                setIsFetchingShipping(false);
+            }
+        };
+
+        const debounceTimer = setTimeout(() => {
+            fetchShippingCharges();
+        }, 500);
+
+        return () => clearTimeout(debounceTimer);
+    }, [currentLocation.pincode, product]);
 
     useEffect(() => {
         if (isAuthenticated) {
@@ -445,10 +481,12 @@ const ProductDetail = () => {
                                     )}
                                 </div>
                                 <div className="flex items-center gap-1 pb-1">
-                                    {storeSettingsLoading ? (
+                                    {isFetchingShipping ? (
                                         <span className="text-slate-500 dark:text-slate-400 font-bold text-xs">Checking shipping...</span>
-                                    ) : deliveryCharge > 0 ? (
-                                        <span className="text-slate-600 dark:text-slate-400 font-bold text-xs">+ ₹{deliveryCharge} Shipping</span>
+                                    ) : !currentLocation.pincode ? (
+                                        <span className="text-amber-600 dark:text-amber-400 font-bold text-xs">Select pincode for shipping</span>
+                                    ) : dynamicShippingCharge > 0 ? (
+                                        <span className="text-slate-600 dark:text-slate-400 font-bold text-xs">+ ₹{dynamicShippingCharge} Shipping</span>
                                     ) : (
                                         <span className="text-emerald-600 dark:text-emerald-400 font-bold text-xs">Free Shipping</span>
                                     )}

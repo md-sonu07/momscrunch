@@ -1,12 +1,13 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { ShoppingBag, Trash2, Plus, Minus, ArrowRight, ChevronLeft, CreditCard, RefreshCw } from 'lucide-react';
+import { ShoppingBag, Trash2, Plus, Minus, ArrowRight, ChevronLeft, CreditCard, RefreshCw, MapPin } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { fetchCart, updateQuantity, deleteItem } from '../../redux/thunk/cartThunk';
 import { selectCart, selectCartItems, selectCartLoading, selectCartError, clearCartError } from '../../redux/slice/cartSlice';
 import { getStoreSettings } from '../../redux/thunk/storeSettingsThunk';
 import { calculateOrderSummary, formatCurrency } from '../../utils/orderSummary';
+import { getShippingCharges } from '../../api/shipping.api';
 import Skeleton from '../../components/common/Skeleton';
 
 const Cart = () => {
@@ -16,6 +17,7 @@ const Cart = () => {
     const loading = useSelector(selectCartLoading);
     const error = useSelector(selectCartError);
     const cartItems = useSelector(selectCartItems);
+    const currentLocation = useSelector((state) => state.location.currentLocation);
     const {
         gstPercentage,
         deliveryCharge,
@@ -23,10 +25,12 @@ const Cart = () => {
         loading: storeSettingsLoading,
     } = useSelector((state) => state.storeSettings);
 
-    useEffect(() => {
-        dispatch(fetchCart());
-        dispatch(getStoreSettings()).catch(() => { });
-    }, [dispatch]);
+    // Shipping charges state
+    const [shippingCharges, setShippingCharges] = useState(0);
+    const [isFetchingShipping, setIsFetchingShipping] = useState(false);
+    const [shippingError, setShippingError] = useState(null);
+    // Use pincode from Redux location state instead of local state
+    const pincode = currentLocation.pincode;
 
     const handleRefreshCart = () => {
         dispatch(clearCartError());
@@ -75,20 +79,62 @@ const Cart = () => {
         }
     };
 
+    // Calculate subtotal first
     const { subtotal, originalSubtotal, totalDiscount } = useMemo(() => {
         const selling = cartItems.reduce((acc, item) => acc + (parseFloat(item.product_price) * item.quantity), 0);
         const original = cartItems.reduce((acc, item) => acc + (parseFloat(item.product_original_price || item.product_price) * item.quantity), 0);
         const discount = original - selling;
         return { subtotal: selling, originalSubtotal: original, totalDiscount: discount };
     }, [cartItems]);
+
+    useEffect(() => {
+        dispatch(fetchCart());
+        dispatch(getStoreSettings()).catch(() => { });
+    }, [dispatch]);
+
+    // Fetch shipping charges when pincode changes (moved after subtotal definition)
+    useEffect(() => {
+        const fetchShippingCharges = async () => {
+            if (!pincode || pincode.length !== 6) {
+                setShippingCharges(0);
+                setShippingError(null);
+                return;
+            }
+
+            setIsFetchingShipping(true);
+            setShippingError(null);
+            
+            try {
+                const response = await getShippingCharges({
+                    pincode: pincode,
+                    cart_total: subtotal
+                });
+                
+                setShippingCharges(response.shipping_charges || 0);
+            } catch (error) {
+                console.error('Error fetching shipping charges:', error);
+                setShippingError(error.response?.data?.detail || 'Failed to fetch shipping charges');
+                setShippingCharges(0);
+            } finally {
+                setIsFetchingShipping(false);
+            }
+        };
+
+        const debounceTimer = setTimeout(() => {
+            fetchShippingCharges();
+        }, 500);
+
+        return () => clearTimeout(debounceTimer);
+    }, [currentLocation.pincode, subtotal]); // Use currentLocation.pincode instead of pincode
+
     const summary = useMemo(
         () => calculateOrderSummary({
             subtotal,
             gstPercentage,
-            deliveryCharge,
+            deliveryCharge: shippingCharges, // Use dynamic shipping charges
             freeShippingThreshold,
         }),
-        [subtotal, gstPercentage, deliveryCharge, freeShippingThreshold]
+        [subtotal, gstPercentage, shippingCharges, freeShippingThreshold]
     );
 
     // Error state
@@ -316,6 +362,44 @@ const Cart = () => {
                     <div className="lg:col-span-2">
                         <div className="bg-white/70 dark:bg-slate-900/40 backdrop-blur-2xl border border-white dark:border-slate-800 rounded-2xl p-8 shadow-xl shadow-slate-200/50 dark:shadow-none sticky top-32">
                             <h2 className="text-xl font-black text-slate-900 dark:text-white mb-8 tracking-tight">Order Summary</h2>
+
+                            {/* Location Display from Navbar */}
+                            <div className="mb-6 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">
+                                <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">
+                                    Delivery Location
+                                </label>
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                                            <MapPin size={16} className="text-primary" />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-bold text-slate-900 dark:text-white">
+                                                {currentLocation.city || 'Select Area'}
+                                            </p>
+                                            <p className="text-xs text-slate-500">
+                                                {currentLocation.pincode ? `Pincode: ${currentLocation.pincode}` : 'No pincode selected'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    {isFetchingShipping && (
+                                        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                                    )}
+                                </div>
+                                {shippingError && (
+                                    <p className="text-[8px] text-rose-500 mt-2">{shippingError}</p>
+                                )}
+                                {currentLocation.pincode && !shippingError && (
+                                    <p className="text-[8px] text-emerald-500 mt-2">
+                                        {shippingCharges === 0 ? 'Free shipping applied!' : `Shipping: ₹${formatCurrency(shippingCharges)}`}
+                                    </p>
+                                )}
+                                {!currentLocation.pincode && (
+                                    <p className="text-[8px] text-amber-500 mt-2">
+                                        Please select a pincode from the navbar to see shipping charges
+                                    </p>
+                                )}
+                            </div>
 
                             <div className="space-y-4 mb-8">
                                 <div className="flex justify-between items-center text-sm font-bold text-slate-500">

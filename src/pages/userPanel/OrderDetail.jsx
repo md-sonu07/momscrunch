@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
     ChevronLeft, Package, MapPin, CreditCard, Clock,
-    CheckCircle2, Box, Truck, ShieldCheck, ArrowRight,
-    ShoppingBag, Download, AlertCircle, Printer
+    CheckCircle2, Truck, ShieldCheck,
+    ShoppingBag, Download, AlertCircle
 } from 'lucide-react';
 import { getOrderDetails, cancelOrder } from '../../api/order.api';
 import { formatCurrency } from '../../utils/orderSummary';

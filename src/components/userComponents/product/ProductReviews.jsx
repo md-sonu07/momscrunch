@@ -3,6 +3,7 @@ import { Star, MessageSquare, Send, User, ThumbsUp, Loader2, Trash2 } from 'luci
 import { useDispatch, useSelector } from 'react-redux';
 import { getReviewsByProduct, postReview, removeReview } from '../../../redux/thunk/reviewThunk';
 import { toast } from 'react-hot-toast';
+import ConfirmationModal from '../../common/ConfirmationModal';
 
 const ProductReviews = ({ productName, productId }) => {
     const dispatch = useDispatch();
@@ -12,6 +13,10 @@ const ProductReviews = ({ productName, productId }) => {
     const [rating, setRating] = useState(0);
     const [hover, setHover] = useState(0);
     const [message, setMessage] = useState('');
+    
+    // Modal state
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [reviewToDelete, setReviewToDelete] = useState(null);
 
     useEffect(() => {
         if (productId) {
@@ -44,6 +49,24 @@ const ProductReviews = ({ productName, productId }) => {
             setMessage('');
         } catch (error) {
             toast.error(error || "Failed to post review");
+        }
+    };
+
+    const handleDeleteClick = (reviewId) => {
+        setReviewToDelete(reviewId);
+        setIsDeleteModalOpen(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!reviewToDelete) return;
+        
+        try {
+            await dispatch(removeReview(reviewToDelete)).unwrap();
+            toast.success('Review deleted successfully');
+            setIsDeleteModalOpen(false);
+            setReviewToDelete(null);
+        } catch (err) {
+            toast.error(err || 'Failed to delete review');
         }
     };
 
@@ -197,10 +220,10 @@ const ProductReviews = ({ productName, productId }) => {
                                     )}
 
                                     <div className="flex items-center justify-between pt-4 border-t border-slate-50 dark:border-white/5">
-                                        <button className="flex items-center gap-2 text-[10px] font-black text-slate-400 hover:text-primary transition-colors uppercase tracking-widest">
+                                        {/* <button className="flex items-center gap-2 text-[10px] font-black text-slate-400 hover:text-primary transition-colors uppercase tracking-widest">
                                             <ThumbsUp size={14} />
                                             Helpful ({review.likes || 0})
-                                        </button>
+                                        </button> */}
                                         <div className="flex items-center gap-3">
                                             <div className="flex items-center gap-2">
                                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
@@ -208,16 +231,7 @@ const ProductReviews = ({ productName, productId }) => {
                                             </div>
                                             {isAuthenticated && user?.id === review.user?.id && (
                                                 <button
-                                                    onClick={async () => {
-                                                        if (window.confirm('Are you sure you want to delete this review?')) {
-                                                            try {
-                                                                await dispatch(removeReview(review.id)).unwrap();
-                                                                toast.success('Review deleted successfully');
-                                                            } catch (err) {
-                                                                toast.error(err || 'Failed to delete review');
-                                                            }
-                                                        }
-                                                    }}
+                                                    onClick={() => handleDeleteClick(review.id)}
                                                     disabled={deleting === review.id}
                                                     className="flex items-center gap-1.5 text-[10px] font-black text-slate-400 hover:text-red-500 transition-colors uppercase tracking-widest cursor-pointer disabled:opacity-50"
                                                     title="Delete your review"
@@ -249,6 +263,18 @@ const ProductReviews = ({ productName, productId }) => {
                     )}
                 </div>
             </div>
+
+            {/* Confirmation Modal */}
+            <ConfirmationModal 
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onConfirm={handleConfirmDelete}
+                title="Delete Review?"
+                message="Are you sure you want to delete this review? This action cannot be undone and your feedback will be removed permanently."
+                confirmText="Delete Review"
+                isLoading={deleting === reviewToDelete}
+                variant="danger"
+            />
         </div>
     );
 };

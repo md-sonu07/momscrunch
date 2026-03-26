@@ -2,6 +2,8 @@ import axiosApi from './axios.js';
 
 /**
  * Creates an order in the backend from the current cart.
+ * @param {Object} shippingAddress - The shipping address data
+ * @param {string} paymentMethod - The payment method ('online' or 'cod')
  * @returns {Promise<Object>} - The created order details.
  */
 export const placeOrder = async (shippingAddress, paymentMethod = 'online') => {

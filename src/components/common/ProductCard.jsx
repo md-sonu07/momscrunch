@@ -16,6 +16,7 @@ const ProductCard = ({ product, variant = "vertical" }) => {
     const wishlistPendingProductIds = useSelector((state) => state.wishlist.pendingProductIds);
     const wishlistHasLoaded = useSelector((state) => state.wishlist.hasLoaded);
     const [isAddingToCart, setIsAddingToCart] = useState(false);
+    console.log("Products", product);
 
     // Map API data to component safe names if they are slightly different
     const id = product.id ?? product.product_id;
@@ -30,7 +31,6 @@ const ProductCard = ({ product, variant = "vertical" }) => {
     const reviews = product.reviews || product.review_count || 0;
     const weight = product.weight || product.product_weight || "Standard Pack";
     const tag = product.status || (discount > 0 ? `${discount}% OFF` : null);
-    const tagBg = product.status ? product.tagBg : 'bg-rose-500';
     const existingWishlistItem = wishlistItems.find((item) => item.product_id === id) ?? null;
     const isWishlisted = wishlistHasLoaded ? Boolean(existingWishlistItem) : Boolean(product.is_wishlisted);
     const isWishlistUpdating = wishlistPendingProductIds.includes(id);
@@ -274,8 +274,8 @@ const ProductCard = ({ product, variant = "vertical" }) => {
                                 Processing
                             </div>
                         ) : tag && (
-                            <span className={`${tagBg || ''} bg-slate-900/80 backdrop-blur-md text-white font-black uppercase tracking-wider rounded-lg shadow-sm border border-white/10 text-[8px] md:text-[9px] px-2 py-1`}>
-                                {tag || ""}
+                            <span className={`bg-slate-900/80 backdrop-blur-md text-white font-black uppercase tracking-wider rounded-lg shadow-sm border border-white/10 text-[8px] md:text-[9px] px-2 py-1`}>
+                                {tag}
                             </span>
                         )}
                     </div>
