@@ -430,11 +430,14 @@ const ProductDetail = () => {
                                 <h1 className="text-3xl md:text-5xl font-black text-slate-900 dark:text-white leading-[1.1] tracking-tight">
                                     {product.name}
                                 </h1>
-                                {product.status && (
-                                    <span className="bg-orange-500 text-white font-black text-[9px] md:text-[10px] uppercase tracking-widest px-3 py-1.5 rounded-xl shadow-lg shadow-orange-500/20">
-                                        {product.status}
-                                    </span>
-                                )}
+                                {(() => {
+                                    const displayStatus = product.status || (discount > 0 ? `${discount}% OFF` : (oldPrice && price === oldPrice ? "No Discount" : null));
+                                    return displayStatus && (
+                                        <span className="bg-orange-500 text-white font-black text-[9px] md:text-[10px] uppercase tracking-widest px-3 py-1.5 rounded-xl shadow-lg shadow-orange-500/20">
+                                            {displayStatus}
+                                        </span>
+                                    );
+                                })()}
                             </div>
 
                             {/* Rating and Reviews */}
